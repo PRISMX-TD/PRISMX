@@ -1,0 +1,3752 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>棱镜量化 PRISM X</title>
+    <style>
+        /* 加载真实LASER字体 */
+        @font-face {
+            font-family: 'LASER';
+            src: url('laser.ttf') format('truetype');
+            font-weight: normal;
+            font-style: normal;
+            font-display: swap;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0a0a0a;
+            color: #ffffff;
+            font-family: 'Inter', 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+            overflow-x: hidden;
+        }
+        
+        /* CSS变量定义 - 用于响应式调整 */
+        :root {
+            --hero-container-width: 600px;
+            --hero-container-height: 600px;
+            --triangle-width: 500px;
+            --triangle-height: 400px;
+            --triangle-top: 80px;
+            --prism-top: 260px;
+            --x-top: 360px;
+            --tagline-top: 520px;
+            --scroll-hint-top: 600px;
+        }
+
+        /* 自定义光标 */
+        .cursor {
+            position: fixed;
+            width: 20px;
+            height: 20px;
+            background: radial-gradient(circle, #8b5cf6, transparent);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 9999;
+            transition: transform 0.1s ease;
+        }
+
+         /* 左侧PRISM字母导航 */
+         .prism-nav {
+            position: fixed;
+            left: 60px;
+            top: 50%;
+            transform: translateY(-50%) translateX(-100px);
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            gap: 40px;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 1.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            background: transparent !important;
+            backdrop-filter: none !important;
+            -webkit-backdrop-filter: none !important;
+            box-shadow: none !important;
+        }
+
+        .prism-nav.visible {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(-50%) translateX(0);
+        }
+
+        .prism-nav.hiding {
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-50%) translateX(-120px) scale(0.8);
+            transition: all 1s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        }
+
+        .nav-letter {
+            font-size: 5rem;
+            font-weight: normal;
+            color: #333333;
+            transition: all 1.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            cursor: pointer;
+            position: relative;
+            text-align: center;
+            width: 80px;
+            transform: translateX(-30px);
+            opacity: 0.6;
+            font-family: 'LASER', 'Arial Black', sans-serif;
+            letter-spacing: 2px;
+        }
+
+        .prism-nav.visible .nav-letter {
+            transform: translateX(0);
+            opacity: 1;
+        }
+
+        .nav-letter.active {
+            color: #8b5cf6;
+            text-shadow: 0 0 40px rgba(139, 92, 246, 0.9);
+            transform: scale(1.4) translateX(30px);
+        }
+
+        .nav-letter::after {
+            content: '';
+            position: absolute;
+            right: -20px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 0;
+            height: 6px;
+            background: linear-gradient(90deg, #8b5cf6, #a855f7);
+            transition: width 0.8s ease;
+            border-radius: 3px;
+        }
+
+        .nav-letter.active::after {
+            width: 100px;
+        }
+
+        /* Logo首页 */
+        .hero-section {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            background: #000000;
+            z-index: 1;
+            overflow: hidden;
+        }
+
+        /* 首页背景效果 */
+        .hero-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                radial-gradient(circle at 30% 40%, rgba(139, 92, 246, 0.08), transparent 60%),
+                radial-gradient(circle at 70% 60%, rgba(168, 85, 247, 0.06), transparent 60%);
+            animation: networkPulse 12s ease-in-out infinite;
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        .hero-section.network-active::before {
+            opacity: 1.2;
+            animation-duration: 6s;
+        }
+
+        /* 三角形容器的光线效果 - 只保留右侧光线 */
+        .triangle-wrapper::before {
+            content: '';
+            position: absolute;
+            top: 25%;
+            right: 20%;
+            width: 2px;
+            height: 45%;
+            background: linear-gradient(180deg, 
+                transparent 0%,
+                rgba(0, 255, 255, 0.6) 20%,
+                rgba(0, 150, 255, 0.5) 40%,
+                rgba(100, 0, 255, 0.4) 60%,
+                rgba(255, 0, 200, 0.3) 80%,
+                transparent 100%
+            );
+            transform: rotate(-40deg);
+            animation: heroLightRay2 9s ease-in-out infinite;
+            pointer-events: none;
+            z-index: 0;
+            filter: blur(1px);
+            transition: all 0.3s ease;
+        }
+
+        .hero-section.mouse-active .triangle-wrapper::before {
+            filter: blur(0.5px);
+            width: 3px;
+            opacity: 1.4;
+            animation-duration: 4.5s;
+        }
+
+        .triangle-wrapper::after {
+            content: '';
+            position: absolute;
+            top: 10%;
+            left: 50%;
+            width: 1.5px;
+            height: 35%;
+            background: linear-gradient(180deg, 
+                transparent 0%,
+                rgba(255, 255, 255, 0.4) 25%,
+                rgba(139, 92, 246, 0.5) 50%,
+                rgba(168, 85, 247, 0.3) 75%,
+                transparent 100%
+            );
+            transform: rotate(10deg);
+            animation: heroLightRay3 7s ease-in-out infinite;
+            pointer-events: none;
+            z-index: 0;
+            filter: blur(0.8px);
+            transition: all 0.3s ease;
+        }
+
+        .hero-section.mouse-active .triangle-wrapper::after {
+            filter: blur(0.3px);
+            width: 2.5px;
+            opacity: 1.5;
+            animation-duration: 3.5s;
+        }
+
+        @keyframes heroLightRay2 {
+            0%, 100% {
+                opacity: 0.6;
+                transform: rotate(-40deg) translateY(0);
+            }
+            40% {
+                opacity: 0.9;
+                transform: rotate(-35deg) translateY(-6px);
+            }
+            70% {
+                opacity: 0.7;
+                transform: rotate(-45deg) translateY(4px);
+            }
+        }
+
+        @keyframes heroLightRay3 {
+            0%, 100% {
+                opacity: 0.5;
+                transform: rotate(10deg) translateY(0);
+            }
+            30% {
+                opacity: 0.8;
+                transform: rotate(15deg) translateY(-4px);
+            }
+            60% {
+                opacity: 0.6;
+                transform: rotate(5deg) translateY(3px);
+            }
+        }
+
+        /* 额外的微光粒子 */
+        .main-container::before {
+            content: '';
+            position: absolute;
+            top: 30%;
+            right: 15%;
+            width: 4px;
+            height: 4px;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.8), transparent);
+            border-radius: 50%;
+            animation: sparkle1 4s ease-in-out infinite;
+            pointer-events: none;
+            z-index: 1;
+            transition: all 0.3s ease;
+        }
+
+        .hero-section.mouse-active .main-container::before {
+            width: 6px;
+            height: 6px;
+            animation-duration: 2s;
+            opacity: 1.2;
+        }
+
+        .main-container::after {
+            content: '';
+            position: absolute;
+            top: 60%;
+            left: 25%;
+            width: 3px;
+            height: 3px;
+            background: radial-gradient(circle, rgba(139, 92, 246, 0.9), transparent);
+            border-radius: 50%;
+            animation: sparkle2 6s ease-in-out infinite;
+            pointer-events: none;
+            z-index: 1;
+            transition: all 0.3s ease;
+        }
+
+        .hero-section.mouse-active .main-container::after {
+            width: 5px;
+            height: 5px;
+            animation-duration: 3s;
+            opacity: 1.3;
+        }
+
+        @keyframes sparkle1 {
+            0%, 100% {
+                opacity: 0.3;
+                transform: scale(1);
+            }
+            50% {
+                opacity: 1;
+                transform: scale(1.5);
+            }
+        }
+
+        @keyframes sparkle2 {
+            0%, 100% {
+                opacity: 0.4;
+                transform: scale(1);
+            }
+            50% {
+                opacity: 0.9;
+                transform: scale(1.3);
+            }
+        }
+
+        /* 背景光线效果 */
+        .hero-section::after {
+            content: '';
+            position: absolute;
+            top: 15%;
+            left: 20%;
+            width: 3px;
+            height: 50%;
+            background: linear-gradient(180deg, 
+                transparent 0%,
+                rgba(255, 0, 150, 0.7) 15%,
+                rgba(255, 100, 0, 0.6) 30%,
+                rgba(255, 255, 0, 0.5) 45%,
+                rgba(0, 255, 0, 0.4) 60%,
+                rgba(0, 255, 255, 0.3) 75%,
+                rgba(150, 0, 255, 0.2) 90%,
+                transparent 100%
+            );
+            transform: rotate(30deg);
+            animation: heroLightRay1 8s ease-in-out infinite;
+            pointer-events: none;
+            z-index: -1;
+            filter: blur(1.5px);
+            transition: all 0.3s ease;
+        }
+
+        .hero-section.mouse-active::after {
+            filter: blur(0.8px);
+            opacity: 1.3;
+            width: 4px;
+            animation-duration: 4s;
+        }
+
+        @keyframes heroLightRay1 {
+            0%, 100% {
+                opacity: 0.7;
+                transform: rotate(30deg) translateY(0) scale(1);
+            }
+            35% {
+                opacity: 1;
+                transform: rotate(35deg) translateY(-8px) scale(1.1);
+            }
+            65% {
+                opacity: 0.8;
+                transform: rotate(25deg) translateY(5px) scale(0.95);
+            }
+        }
+
+        /* 电流网络容器 */
+        .network-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            pointer-events: none;
+            z-index: 1;
+            overflow: hidden;
+        }
+
+        /* 网络节点样式 */
+        .network-node {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            background: radial-gradient(circle, rgba(139, 92, 246, 1), rgba(139, 92, 246, 0.3), transparent);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            opacity: 0;
+            transition: all 0.3s ease;
+            z-index: 3;
+        }
+
+        .network-node.active {
+            opacity: 1;
+            animation: nodeGlow 2s ease-in-out infinite;
+        }
+
+        .network-node.mouse-node {
+            width: 12px;
+            height: 12px;
+            background: radial-gradient(circle, rgba(255, 255, 255, 1), rgba(139, 92, 246, 0.8), rgba(139, 92, 246, 0.2), transparent);
+            animation: mousePulse 1s ease-in-out infinite;
+        }
+
+        @keyframes nodeGlow {
+            0%, 100% {
+                box-shadow: 0 0 8px rgba(139, 92, 246, 0.6);
+                transform: translate(-50%, -50%) scale(1);
+            }
+            50% {
+                box-shadow: 0 0 16px rgba(139, 92, 246, 1), 0 0 24px rgba(139, 92, 246, 0.4);
+                transform: translate(-50%, -50%) scale(1.2);
+            }
+        }
+
+        @keyframes mousePulse {
+            0%, 100% {
+                box-shadow: 0 0 12px rgba(255, 255, 255, 0.8), 0 0 20px rgba(139, 92, 246, 0.6);
+                transform: translate(-50%, -50%) scale(1);
+            }
+            50% {
+                box-shadow: 0 0 20px rgba(255, 255, 255, 1), 0 0 30px rgba(139, 92, 246, 0.8), 0 0 40px rgba(139, 92, 246, 0.3);
+                transform: translate(-50%, -50%) scale(1.3);
+            }
+        }
+
+        /* 连接线样式 */
+        .connection-line {
+            position: absolute;
+            height: 1px;
+            background: linear-gradient(90deg, 
+                rgba(139, 92, 246, 0) 0%,
+                rgba(139, 92, 246, 0.8) 20%,
+                rgba(168, 85, 247, 1) 50%,
+                rgba(139, 92, 246, 0.8) 80%,
+                rgba(139, 92, 246, 0) 100%
+            );
+            transform-origin: left center;
+            opacity: 0;
+            transition: opacity 0.4s ease;
+            z-index: 2;
+        }
+
+        .connection-line.active {
+            opacity: 1;
+            animation: electricFlow 2s ease-in-out infinite;
+        }
+
+        .connection-line.strong {
+            height: 2px;
+            background: linear-gradient(90deg, 
+                rgba(139, 92, 246, 0) 0%,
+                rgba(255, 255, 255, 0.6) 15%,
+                rgba(139, 92, 246, 1) 30%,
+                rgba(168, 85, 247, 1) 50%,
+                rgba(139, 92, 246, 1) 70%,
+                rgba(255, 255, 255, 0.6) 85%,
+                rgba(139, 92, 246, 0) 100%
+            );
+            animation: strongElectricFlow 1.5s ease-in-out infinite;
+        }
+
+        @keyframes electricFlow {
+            0%, 100% {
+                filter: brightness(1) blur(0px);
+            }
+            25% {
+                filter: brightness(1.3) blur(0.5px);
+            }
+            50% {
+                filter: brightness(1.6) blur(1px);
+            }
+            75% {
+                filter: brightness(1.3) blur(0.5px);
+            }
+        }
+
+        @keyframes strongElectricFlow {
+            0%, 100% {
+                filter: brightness(1) blur(0px);
+                box-shadow: 0 0 5px rgba(139, 92, 246, 0.5);
+            }
+            33% {
+                filter: brightness(1.5) blur(0.8px);
+                box-shadow: 0 0 10px rgba(139, 92, 246, 0.8), 0 0 15px rgba(168, 85, 247, 0.4);
+            }
+            66% {
+                filter: brightness(2) blur(1.2px);
+                box-shadow: 0 0 15px rgba(255, 255, 255, 0.6), 0 0 25px rgba(139, 92, 246, 1);
+            }
+        }
+
+        /* 数据包动画 */
+        .data-packet {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: radial-gradient(circle, rgba(255, 255, 255, 1), rgba(139, 92, 246, 0.8), transparent);
+            border-radius: 50%;
+            opacity: 0;
+            z-index: 4;
+        }
+
+        .data-packet.active {
+            opacity: 1;
+            animation: packetFlow 2s linear infinite;
+        }
+
+        @keyframes packetFlow {
+            0% {
+                transform: scale(0.5);
+                box-shadow: 0 0 3px rgba(255, 255, 255, 0.8);
+            }
+            50% {
+                transform: scale(1.2);
+                box-shadow: 0 0 8px rgba(255, 255, 255, 1), 0 0 12px rgba(139, 92, 246, 0.6);
+            }
+            100% {
+                transform: scale(0.8);
+                box-shadow: 0 0 5px rgba(255, 255, 255, 0.9);
+            }
+        }
+
+        /* 主容器 */
+        .main-container {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: var(--hero-container-width);
+            height: var(--hero-container-height);
+        }
+
+        /* 三角形 */
+        .triangle-wrapper {
+            position: absolute;
+            top: var(--triangle-top);
+            left: 50%;
+            transform: translateX(-50%);
+            width: var(--triangle-width);
+            height: var(--triangle-height);
+            z-index: 1;
+        }
+
+        /* PRISM */
+        .prism-wrapper {
+            position: absolute;
+            top: var(--prism-top);
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 2;
+        }
+
+        .prism-text {
+            display: flex;
+            gap: 25px;
+            font-size: 5rem;
+            font-weight: normal;
+            color: #ffffff;
+            justify-content: center;
+            position: relative;
+            font-family: 'LASER', 'Arial Black', sans-serif;
+            letter-spacing: 12px;
+        }
+
+        /* 字母基础动画 */
+        .letter {
+            opacity: 0;
+            animation: fadeInUp 1s ease forwards;
+            position: relative;
+            color: #ffffff;
+            font-family: 'LASER', 'Arial Black', sans-serif;
+        }
+
+        /* PRISM字母的发光循环 - 12秒一个完整循环 */
+        .letter:nth-child(1) {
+            animation: fadeInUp 1s ease forwards, prismSequenceCycle 12s ease-in-out infinite;
+            animation-delay: 0.1s, 3s;
+        }
+
+        .letter:nth-child(2) {
+            animation: fadeInUp 1s ease forwards, prismSequenceCycle 12s ease-in-out infinite;
+            animation-delay: 0.2s, 3s;
+        }
+
+        .letter:nth-child(3) {
+            animation: fadeInUp 1s ease forwards, prismSequenceCycle 12s ease-in-out infinite;
+            animation-delay: 0.3s, 3s;
+        }
+
+        .letter:nth-child(4) {
+            animation: fadeInUp 1s ease forwards, prismSequenceCycle 12s ease-in-out infinite;
+            animation-delay: 0.4s, 3s;
+        }
+
+        .letter:nth-child(5) {
+            animation: fadeInUp 1s ease forwards, prismSequenceCycle 12s ease-in-out infinite;
+            animation-delay: 0.5s, 3s;
+        }
+
+        /* PRISM发光循环动画 - 每个字母在不同时间点发光并维持 */
+        @keyframes prismSequenceCycle {
+            /* P字母: 0-10%发光 */
+            0% { text-shadow: 0 0 5px rgba(255, 255, 255, 0.3); }
+            8.33% { 
+                text-shadow: 
+                    0 0 15px rgba(255, 255, 255, 0.9),
+                    0 0 30px rgba(139, 92, 246, 0.7),
+                    0 0 45px rgba(139, 92, 246, 0.4);
+            }
+            
+            /* R字母: 10-20%发光 */
+            16.66% { 
+                text-shadow: 
+                    0 0 15px rgba(255, 255, 255, 0.9),
+                    0 0 30px rgba(139, 92, 246, 0.7),
+                    0 0 45px rgba(139, 92, 246, 0.4);
+            }
+            
+            /* I字母: 20-30%发光 */
+            25% { 
+                text-shadow: 
+                    0 0 15px rgba(255, 255, 255, 0.9),
+                    0 0 30px rgba(139, 92, 246, 0.7),
+                    0 0 45px rgba(139, 92, 246, 0.4);
+            }
+            
+            /* S字母: 30-40%发光 */
+            33.33% { 
+                text-shadow: 
+                    0 0 15px rgba(255, 255, 255, 0.9),
+                    0 0 30px rgba(139, 92, 246, 0.7),
+                    0 0 45px rgba(139, 92, 246, 0.4);
+            }
+            
+            /* M字母: 40-50%发光 */
+            41.66% { 
+                text-shadow: 
+                    0 0 15px rgba(255, 255, 255, 0.9),
+                    0 0 30px rgba(139, 92, 246, 0.7),
+                    0 0 45px rgba(139, 92, 246, 0.4);
+            }
+            
+            /* 50-66.66%: 维持PRISM发光，等待X */
+            50%, 66.66% { 
+                text-shadow: 
+                    0 0 15px rgba(255, 255, 255, 0.9),
+                    0 0 30px rgba(139, 92, 246, 0.7),
+                    0 0 45px rgba(139, 92, 246, 0.4);
+            }
+            
+            /* 75-100%: 逐渐暗淡 */
+            75% { 
+                text-shadow: 
+                    0 0 10px rgba(255, 255, 255, 0.6),
+                    0 0 20px rgba(139, 92, 246, 0.4);
+            }
+            85% { 
+                text-shadow: 0 0 8px rgba(255, 255, 255, 0.4);
+            }
+            100% { text-shadow: 0 0 5px rgba(255, 255, 255, 0.3); }
+        }
+
+        /* 为每个PRISM字母设置不同的发光时机 */
+        .letter:nth-child(1) {
+            animation: fadeInUp 1s ease forwards, prismP 12s ease-in-out infinite;
+            animation-delay: 0.1s, 3s;
+        }
+
+        .letter:nth-child(2) {
+            animation: fadeInUp 1s ease forwards, prismR 12s ease-in-out infinite;
+            animation-delay: 0.2s, 3s;
+        }
+
+        .letter:nth-child(3) {
+            animation: fadeInUp 1s ease forwards, prismI 12s ease-in-out infinite;
+            animation-delay: 0.3s, 3s;
+        }
+
+        .letter:nth-child(4) {
+            animation: fadeInUp 1s ease forwards, prismS 12s ease-in-out infinite;
+            animation-delay: 0.4s, 3s;
+        }
+
+        .letter:nth-child(5) {
+            animation: fadeInUp 1s ease forwards, prismM 12s ease-in-out infinite;
+            animation-delay: 0.5s, 3s;
+        }
+
+        /* P字母发光 - 在循环的0-8.33%发光 */
+        @keyframes prismP {
+            0% { text-shadow: 0 0 5px rgba(255, 255, 255, 0.3); }
+            8.33% { 
+                text-shadow: 
+                    0 0 15px rgba(255, 255, 255, 0.9),
+                    0 0 30px rgba(139, 92, 246, 0.7),
+                    0 0 45px rgba(139, 92, 246, 0.4);
+            }
+            16.66%, 66.66% { 
+                text-shadow: 
+                    0 0 15px rgba(255, 255, 255, 0.9),
+                    0 0 30px rgba(139, 92, 246, 0.7),
+                    0 0 45px rgba(139, 92, 246, 0.4);
+            }
+            75% { 
+                text-shadow: 
+                    0 0 10px rgba(255, 255, 255, 0.6),
+                    0 0 20px rgba(139, 92, 246, 0.4);
+            }
+            85% { text-shadow: 0 0 8px rgba(255, 255, 255, 0.4); }
+            100% { text-shadow: 0 0 5px rgba(255, 255, 255, 0.3); }
+        }
+
+        /* R字母发光 - 在P之后发光 */
+        @keyframes prismR {
+            0%, 8.33% { text-shadow: 0 0 5px rgba(255, 255, 255, 0.3); }
+            16.66% { 
+                text-shadow: 
+                    0 0 15px rgba(255, 255, 255, 0.9),
+                    0 0 30px rgba(139, 92, 246, 0.7),
+                    0 0 45px rgba(139, 92, 246, 0.4);
+            }
+            25%, 66.66% { 
+                text-shadow: 
+                    0 0 15px rgba(255, 255, 255, 0.9),
+                    0 0 30px rgba(139, 92, 246, 0.7),
+                    0 0 45px rgba(139, 92, 246, 0.4);
+            }
+            75% { 
+                text-shadow: 
+                    0 0 10px rgba(255, 255, 255, 0.6),
+                    0 0 20px rgba(139, 92, 246, 0.4);
+            }
+            85% { text-shadow: 0 0 8px rgba(255, 255, 255, 0.4); }
+            100% { text-shadow: 0 0 5px rgba(255, 255, 255, 0.3); }
+        }
+
+        /* I字母发光 - 在R之后发光 */
+        @keyframes prismI {
+            0%, 16.66% { text-shadow: 0 0 5px rgba(255, 255, 255, 0.3); }
+            25% { 
+                text-shadow: 
+                    0 0 15px rgba(255, 255, 255, 0.9),
+                    0 0 30px rgba(139, 92, 246, 0.7),
+                    0 0 45px rgba(139, 92, 246, 0.4);
+            }
+            33.33%, 66.66% { 
+                text-shadow: 
+                    0 0 15px rgba(255, 255, 255, 0.9),
+                    0 0 30px rgba(139, 92, 246, 0.7),
+                    0 0 45px rgba(139, 92, 246, 0.4);
+            }
+            75% { 
+                text-shadow: 
+                    0 0 10px rgba(255, 255, 255, 0.6),
+                    0 0 20px rgba(139, 92, 246, 0.4);
+            }
+            85% { text-shadow: 0 0 8px rgba(255, 255, 255, 0.4); }
+            100% { text-shadow: 0 0 5px rgba(255, 255, 255, 0.3); }
+        }
+
+        /* S字母发光 - 在I之后发光 */
+        @keyframes prismS {
+            0%, 25% { text-shadow: 0 0 5px rgba(255, 255, 255, 0.3); }
+            33.33% { 
+                text-shadow: 
+                    0 0 15px rgba(255, 255, 255, 0.9),
+                    0 0 30px rgba(139, 92, 246, 0.7),
+                    0 0 45px rgba(139, 92, 246, 0.4);
+            }
+            41.66%, 66.66% { 
+                text-shadow: 
+                    0 0 15px rgba(255, 255, 255, 0.9),
+                    0 0 30px rgba(139, 92, 246, 0.7),
+                    0 0 45px rgba(139, 92, 246, 0.4);
+            }
+            75% { 
+                text-shadow: 
+                    0 0 10px rgba(255, 255, 255, 0.6),
+                    0 0 20px rgba(139, 92, 246, 0.4);
+            }
+            85% { text-shadow: 0 0 8px rgba(255, 255, 255, 0.4); }
+            100% { text-shadow: 0 0 5px rgba(255, 255, 255, 0.3); }
+        }
+
+        /* M字母发光 - 在S之后发光 */
+        @keyframes prismM {
+            0%, 33.33% { text-shadow: 0 0 5px rgba(255, 255, 255, 0.3); }
+            41.66% { 
+                text-shadow: 
+                    0 0 15px rgba(255, 255, 255, 0.9),
+                    0 0 30px rgba(139, 92, 246, 0.7),
+                    0 0 45px rgba(139, 92, 246, 0.4);
+            }
+            50%, 66.66% { 
+                text-shadow: 
+                    0 0 15px rgba(255, 255, 255, 0.9),
+                    0 0 30px rgba(139, 92, 246, 0.7),
+                    0 0 45px rgba(139, 92, 246, 0.4);
+            }
+            75% { 
+                text-shadow: 
+                    0 0 10px rgba(255, 255, 255, 0.6),
+                    0 0 20px rgba(139, 92, 246, 0.4);
+            }
+            85% { text-shadow: 0 0 8px rgba(255, 255, 255, 0.4); }
+            100% { text-shadow: 0 0 5px rgba(255, 255, 255, 0.3); }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* X字母样式 */
+        .x-wrapper {
+            position: absolute;
+            top: var(--x-top);
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 2;
+        }
+
+        .x-text {
+            font-size: 3.5rem;
+            font-weight: normal;
+            color: #ffffff;
+            text-align: center;
+            opacity: 0;
+            font-family: 'LASER', 'Arial Black', sans-serif;
+            letter-spacing: 8px;
+            /* X字母：先淡入，然后与PRISM同步循环 */
+            animation: fadeInUp 1s ease forwards, xSequenceCycle 12s ease-in-out infinite;
+            animation-delay: 0.8s, 3s;
+        }
+
+        /* X字母发光 - 在PRISM完成后发光(50-66.66%) */
+        @keyframes xSequenceCycle {
+            0%, 50% { text-shadow: 0 0 5px rgba(255, 255, 255, 0.3); }
+            58.33% { 
+                text-shadow: 
+                    0 0 20px rgba(255, 255, 255, 1.1),
+                    0 0 40px rgba(139, 92, 246, 0.8),
+                    0 0 60px rgba(139, 92, 246, 0.5),
+                    0 0 80px rgba(139, 92, 246, 0.3);
+            }
+            66.66% { 
+                text-shadow: 
+                    0 0 20px rgba(255, 255, 255, 1.1),
+                    0 0 40px rgba(139, 92, 246, 0.8),
+                    0 0 60px rgba(139, 92, 246, 0.5),
+                    0 0 80px rgba(139, 92, 246, 0.3);
+            }
+            75% { 
+                text-shadow: 
+                    0 0 12px rgba(255, 255, 255, 0.7),
+                    0 0 24px rgba(139, 92, 246, 0.5);
+            }
+            85% { text-shadow: 0 0 8px rgba(255, 255, 255, 0.4); }
+            100% { text-shadow: 0 0 5px rgba(255, 255, 255, 0.3); }
+        }
+
+        /* X和PRISM字母鼠标悬停效果 */
+        .prism-text:hover .letter,
+        .x-text:hover {
+            animation: fadeInUp 1s ease forwards, hoverGlowEffect 2s ease-in-out infinite !important;
+        }
+
+        @keyframes hoverGlowEffect {
+            0%, 100% {
+                text-shadow: 
+                    0 0 15px rgba(255, 255, 255, 0.8),
+                    0 0 30px rgba(139, 92, 246, 0.6);
+                transform: scale(1.02);
+            }
+            50% {
+                text-shadow: 
+                    0 0 25px rgba(255, 255, 255, 1.2),
+                    0 0 50px rgba(139, 92, 246, 0.9),
+                    0 0 75px rgba(139, 92, 246, 0.6),
+                    0 0 100px rgba(139, 92, 246, 0.3);
+                transform: scale(1.06);
+            }
+        }
+
+        /* 品牌标语 */
+        .tagline-wrapper {
+            position: absolute;
+            top: var(--tagline-top);
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .tagline {
+            font-size: 1.6rem;
+            color: #cccccc;
+            text-align: center;
+            white-space: nowrap;
+            opacity: 0;
+            animation: fadeInUp 1s ease forwards;
+            animation-delay: 1.2s;
+        }
+
+        /* 内容展示区域 */
+        .content-area {
+            margin-left: 0;
+            transition: margin-left 1.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+
+        .content-area.with-nav {
+            margin-left: 280px;
+        }
+
+        /* 每个字母的展示区域 */
+        .letter-section {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            opacity: 0.3;
+            transition: all 1s ease;
+            padding: 80px 60px;
+            overflow: hidden;
+        }
+
+        .letter-section.active {
+            opacity: 1;
+        }
+
+        .letter-content {
+            max-width: 900px;
+            transform: translateX(100px);
+            opacity: 0;
+            transition: all 1.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+
+        .letter-section.active .letter-content {
+            transform: translateX(0);
+            opacity: 1;
+        }
+
+        .section-letter {
+            font-size: 15rem;
+            font-weight: 900;
+            color: transparent;
+            -webkit-text-stroke: 3px #8b5cf6;
+            margin-bottom: 40px;
+            position: relative;
+            display: inline-block;
+        }
+
+        .letter-section.active .section-letter {
+            animation: fillLetter 2.5s ease forwards;
+        }
+
+        @keyframes fillLetter {
+            0% {
+                color: transparent;
+                -webkit-text-stroke: 3px #8b5cf6;
+            }
+            30% {
+                color: transparent;
+                -webkit-text-stroke: 5px #a855f7;
+                text-shadow: 0 0 60px rgba(139, 92, 246, 0.8);
+            }
+            100% {
+                color: #8b5cf6;
+                -webkit-text-stroke: 3px #8b5cf6;
+                text-shadow: 0 0 80px rgba(139, 92, 246, 1);
+            }
+        }
+
+        .section-title {
+            font-size: 3.5rem;
+            margin-bottom: 30px;
+            background: linear-gradient(45deg, #ffffff, #8b5cf6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .section-description {
+            font-size: 1.6rem;
+            line-height: 1.8;
+            color: #cccccc;
+            margin-bottom: 50px;
+        }
+
+        .section-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 30px;
+            margin-top: 60px;
+        }
+
+        .detail-card {
+            background: rgba(139, 92, 246, 0.1);
+            border: 1px solid rgba(139, 92, 246, 0.3);
+            border-radius: 20px;
+            padding: 40px;
+            backdrop-filter: blur(15px);
+            transform: translateY(60px);
+            opacity: 0;
+            transition: all 1s ease;
+            cursor: pointer;
+        }
+
+        .detail-card:hover {
+            transform: translateY(-5px);
+            border-color: #8b5cf6;
+            box-shadow: 0 20px 40px rgba(139, 92, 246, 0.3);
+        }
+
+        .letter-section.active .detail-card {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        .letter-section.active .detail-card:nth-child(1) {
+            transition-delay: 0.4s;
+        }
+
+        .letter-section.active .detail-card:nth-child(2) {
+            transition-delay: 0.6s;
+        }
+
+        .letter-section.active .detail-card:nth-child(3) {
+            transition-delay: 0.8s;
+        }
+
+        .detail-card h4 {
+            color: #8b5cf6;
+            margin-bottom: 20px;
+            font-size: 1.4rem;
+        }
+
+        .detail-card p {
+            font-size: 1.1rem;
+            line-height: 1.6;
+        }
+
+        /* 关于我们区域样式 */
+        .about-section {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            padding: 100px 60px;
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.02) 0%, rgba(10, 10, 10, 1) 100%);
+            border-top: 1px solid rgba(139, 92, 246, 0.08);
+            overflow: hidden;
+        }
+
+        .about-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, #8b5cf6, #a855f7, transparent);
+            animation: shimmer 4s infinite;
+        }
+
+        .about-section::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 800px;
+            height: 800px;
+            background: radial-gradient(circle, rgba(139, 92, 246, 0.03) 0%, transparent 70%);
+            border-radius: 50%;
+            animation: pulse 8s ease-in-out infinite;
+            pointer-events: none;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.3; }
+            50% { transform: translate(-50%, -50%) scale(1.2); opacity: 0.6; }
+        }
+
+        .about-content {
+            max-width: 1200px;
+            text-align: center;
+            transform: translateY(50px);
+            opacity: 0;
+            transition: all 1.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            position: relative;
+            z-index: 2;
+        }
+
+        .about-section.active .about-content {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        .about-title {
+            font-size: 3.2rem;
+            font-weight: 400;
+            margin-bottom: 60px;
+            background: linear-gradient(45deg, #ffffff, #8b5cf6, #a855f7);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            position: relative;
+            letter-spacing: 1px;
+        }
+
+        .about-title::after {
+            content: '';
+            position: absolute;
+            bottom: -25px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 120px;
+            height: 4px;
+            background: linear-gradient(90deg, #8b5cf6, #a855f7);
+            border-radius: 2px;
+            opacity: 0;
+            animation: slideIn 1.2s ease forwards;
+            animation-delay: 1s;
+        }
+
+        @keyframes slideIn {
+            from {
+                width: 0;
+                opacity: 0;
+            }
+            to {
+                width: 120px;
+                opacity: 1;
+            }
+        }
+
+        /* 新的时间线设计 */
+        .about-timeline {
+            position: relative;
+            margin-top: 80px;
+            max-width: 1200px;
+            margin-left: auto;
+            margin-right: auto;
+            padding: 0 40px;
+        }
+
+        /* 中央时间轴 */
+        .about-timeline::before {
+            content: '';
+            position: absolute;
+            left: 50%;
+            top: 0;
+            bottom: 0;
+            width: 3px;
+            background: linear-gradient(180deg, 
+                transparent 0%,
+                rgba(139, 92, 246, 0.3) 20%,
+                rgba(139, 92, 246, 0.8) 50%,
+                rgba(139, 92, 246, 0.3) 80%,
+                transparent 100%);
+            transform: translateX(-50%);
+            z-index: 1;
+        }
+
+        .timeline-item {
+            position: relative;
+            width: 45%;
+            margin-bottom: 80px;
+            opacity: 0;
+            transform: translateY(60px) scale(0.9);
+            transition: all 1.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        /* 左右交替布局 */
+        .timeline-item:nth-child(odd) {
+            left: 0;
+            text-align: right;
+        }
+
+        .timeline-item:nth-child(even) {
+            left: 55%;
+            text-align: left;
+        }
+
+        .timeline-item:nth-child(odd) .timeline-content {
+            padding-right: 40px;
+        }
+
+        .timeline-item:nth-child(even) .timeline-content {
+            padding-left: 40px;
+        }
+
+        /* 时间线卡片内容 */
+        .timeline-content {
+            background: linear-gradient(135deg, 
+                rgba(139, 92, 246, 0.08) 0%, 
+                rgba(168, 85, 247, 0.06) 50%, 
+                rgba(139, 92, 246, 0.08) 100%);
+            border: 1px solid rgba(139, 92, 246, 0.2);
+            border-radius: 25px;
+            padding: 40px 35px;
+            backdrop-filter: blur(25px);
+            position: relative;
+            cursor: pointer;
+            transition: all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        /* 时间线节点 */
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            width: 20px;
+            height: 20px;
+            background: radial-gradient(circle, #8b5cf6, rgba(139, 92, 246, 0.8));
+            border: 4px solid rgba(10, 10, 10, 0.9);
+            border-radius: 50%;
+            transform: translateY(-50%);
+            z-index: 3;
+            box-shadow: 
+                0 0 20px rgba(139, 92, 246, 0.6),
+                0 0 40px rgba(139, 92, 246, 0.3);
+            transition: all 0.4s ease;
+        }
+
+        .timeline-item:nth-child(odd)::before {
+            right: -60px;
+        }
+
+        .timeline-item:nth-child(even)::before {
+            left: -60px;
+        }
+
+        /* 连接线 */
+        .timeline-item::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            width: 40px;
+            height: 2px;
+            background: linear-gradient(90deg, rgba(139, 92, 246, 0.6), rgba(139, 92, 246, 0.3));
+            transform: translateY(-50%);
+            z-index: 2;
+        }
+
+        .timeline-item:nth-child(odd)::after {
+            right: -40px;
+        }
+
+        .timeline-item:nth-child(even)::after {
+            left: -40px;
+        }
+
+        .timeline-item:hover {
+            transform: translateY(-15px) scale(1.02);
+        }
+
+        .timeline-item:hover .timeline-content {
+            border-color: rgba(139, 92, 246, 0.4);
+            box-shadow: 
+                0 20px 50px rgba(139, 92, 246, 0.2),
+                0 15px 35px rgba(0, 0, 0, 0.2);
+            transform: translateY(-5px);
+        }
+
+        .timeline-item:hover::before {
+            transform: translateY(-50%) scale(1.3);
+            box-shadow: 
+                0 0 30px rgba(139, 92, 246, 0.8),
+                0 0 60px rgba(139, 92, 246, 0.4);
+        }
+
+        .timeline-item:hover::after {
+            background: linear-gradient(90deg, rgba(139, 92, 246, 0.9), rgba(139, 92, 246, 0.6));
+            box-shadow: 0 0 15px rgba(139, 92, 246, 0.5);
+        }
+
+        .about-section.active .timeline-item:nth-child(1) {
+            transform: translateY(0) scale(1);
+            opacity: 1;
+            transition-delay: 0.2s;
+        }
+
+        .about-section.active .timeline-item:nth-child(2) {
+            transform: translateY(0) scale(1);
+            opacity: 1;
+            transition-delay: 0.4s;
+        }
+
+        .about-section.active .timeline-item:nth-child(3) {
+            transform: translateY(0) scale(1);
+            opacity: 1;
+            transition-delay: 0.6s;
+        }
+
+        .timeline-year {
+            font-size: 3.2rem;
+            font-weight: 800;
+            background: linear-gradient(45deg, #8b5cf6, #a855f7, #c084fc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 25px;
+            position: relative;
+            font-family: 'LASER', 'Arial Black', sans-serif;
+            letter-spacing: 3px;
+            text-shadow: 0 0 30px rgba(139, 92, 246, 0.3);
+        }
+
+        .timeline-year::after {
+            content: '';
+            position: absolute;
+            bottom: -8px;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, transparent, #8b5cf6, #a855f7, transparent);
+            border-radius: 2px;
+            transform: scaleX(0);
+            transition: transform 0.6s ease;
+        }
+
+        .timeline-item:hover .timeline-year::after {
+            transform: scaleX(1);
+        }
+
+        .timeline-content {
+            font-size: 1.3rem;
+            line-height: 1.8;
+            color: #e0e0e0;
+            position: relative;
+            z-index: 2;
+        }
+
+        .timeline-content strong {
+            color: #ffffff;
+            font-weight: 700;
+            display: block;
+            margin-bottom: 15px;
+            font-size: 1.6rem;
+            background: linear-gradient(45deg, #ffffff, #c084fc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .timeline-highlight {
+            color: #a855f7;
+            font-weight: 600;
+            text-shadow: 0 0 15px rgba(168, 85, 247, 0.4);
+        }
+
+        /* 时间线动画状态 */
+        .about-section.active .timeline-item:nth-child(1) {
+            transform: translateY(0) scale(1);
+            opacity: 1;
+            transition-delay: 0.3s;
+        }
+
+        .about-section.active .timeline-item:nth-child(2) {
+            transform: translateY(0) scale(1);
+            opacity: 1;
+            transition-delay: 0.6s;
+        }
+
+        .about-section.active .timeline-item:nth-child(3) {
+            transform: translateY(0) scale(1);
+            opacity: 1;
+            transition-delay: 0.9s;
+        }
+
+        /* 时间线流动动画 */
+        .about-timeline::before {
+            animation: timelineFlow 8s ease-in-out infinite;
+        }
+
+        @keyframes timelineFlow {
+            0%, 100% {
+                background: linear-gradient(180deg, 
+                    transparent 0%,
+                    rgba(139, 92, 246, 0.3) 20%,
+                    rgba(139, 92, 246, 0.8) 50%,
+                    rgba(139, 92, 246, 0.3) 80%,
+                    transparent 100%);
+            }
+            50% {
+                background: linear-gradient(180deg, 
+                    transparent 0%,
+                    rgba(168, 85, 247, 0.4) 20%,
+                    rgba(168, 85, 247, 0.9) 50%,
+                    rgba(168, 85, 247, 0.4) 80%,
+                    transparent 100%);
+            }
+        }
+
+        /* 时间线节点脉冲效果 */
+        .timeline-item::before {
+            animation: nodePulse 3s ease-in-out infinite;
+        }
+
+        @keyframes nodePulse {
+            0%, 100% {
+                box-shadow: 
+                    0 0 20px rgba(139, 92, 246, 0.6),
+                    0 0 40px rgba(139, 92, 246, 0.3);
+            }
+            50% {
+                box-shadow: 
+                    0 0 30px rgba(139, 92, 246, 0.8),
+                    0 0 60px rgba(139, 92, 246, 0.4);
+            }
+        }
+
+        /* 时间线内容悬停时的光晕效果 */
+        .timeline-content::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(circle at center, rgba(139, 92, 246, 0.1), transparent 70%);
+            border-radius: 25px;
+            opacity: 0;
+            transition: opacity 0.6s ease;
+            pointer-events: none;
+        }
+
+        .timeline-item:hover .timeline-content::before {
+            opacity: 1;
+        }
+
+        /* 进度指示器 */
+        .progress-indicator {
+            position: fixed;
+            right: 60px;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+        }
+
+        .progress-dot {
+            width: 15px;
+            height: 15px;
+            border: 3px solid #333333;
+            border-radius: 50%;
+            transition: all 0.4s ease;
+            cursor: pointer;
+        }
+
+        .progress-dot.active {
+            background: #8b5cf6;
+            border-color: #8b5cf6;
+            box-shadow: 0 0 25px rgba(139, 92, 246, 0.8);
+            transform: scale(1.6);
+        }
+
+        /* 滚动提示 */
+        .scroll-hint-wrapper {
+            position: absolute;
+            top: var(--scroll-hint-top);
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .scroll-hint {
+            text-align: center;
+            color: #8b5cf6;
+            opacity: 0;
+            animation: fadeInUp 1s ease forwards;
+            animation-delay: 1.8s;
+            cursor: pointer;
+            transition: all 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+
+        .scroll-hint.bouncing {
+            animation: fadeInUp 1s ease forwards, bounce 2s infinite;
+            animation-delay: 1.8s, 3s;
+        }
+
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% {
+                transform: translateX(-50%) translateY(0);
+            }
+            40% {
+                transform: translateX(-50%) translateY(-15px);
+            }
+            60% {
+                transform: translateX(-50%) translateY(-8px);
+            }
+        }
+
+        /* 回到顶部按钮 */
+        .back-to-top-btn {
+            position: fixed;
+            bottom: 40px;
+            right: 40px;
+            width: 65px;
+            height: 65px;
+            background: linear-gradient(45deg, rgba(10, 10, 10, 0.9), rgba(30, 30, 30, 0.95));
+            border: 1px solid rgba(139, 92, 246, 0.6);
+            border-radius: 18px;
+            backdrop-filter: blur(25px);
+            cursor: pointer;
+            opacity: 0;
+            transform: scale(0);
+            transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+            z-index: 500;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 
+                0 8px 32px rgba(139, 92, 246, 0.15),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        }
+
+        .back-to-top-btn.visible {
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        .back-to-top-btn:hover {
+            background: linear-gradient(45deg, rgba(139, 92, 246, 0.2), rgba(168, 85, 247, 0.25));
+            border-color: rgba(139, 92, 246, 0.9);
+            transform: scale(1.05) translateY(-2px);
+            box-shadow: 
+                0 12px 40px rgba(139, 92, 246, 0.3),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2);
+        }
+
+        .back-to-top-btn .icon {
+            font-size: 1.4rem;
+            color: #8b5cf6;
+            transition: all 0.3s ease;
+            margin-bottom: 2px;
+            position: relative;
+        }
+
+        .back-to-top-btn .icon::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(-45deg);
+            width: 8px;
+            height: 8px;
+            border-top: 2px solid #8b5cf6;
+            border-right: 2px solid #8b5cf6;
+            transition: all 0.3s ease;
+        }
+
+        .back-to-top-btn:hover .icon::before {
+            border-color: #a855f7;
+            transform: translate(-50%, -50%) rotate(-45deg) scale(1.1);
+        }
+
+        .back-to-top-btn .text {
+            font-size: 0.65rem;
+            color: rgba(139, 92, 246, 0.8);
+            font-weight: 500;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            transition: all 0.3s ease;
+        }
+
+        .back-to-top-btn:hover .icon {
+            color: #a855f7;
+            transform: translateY(-1px);
+        }
+
+        .back-to-top-btn:hover .text {
+            color: rgba(168, 85, 247, 1);
+        }
+
+        .back-to-top-btn::before {
+            content: '';
+            position: absolute;
+            inset: -1px;
+            border-radius: 18px;
+            background: linear-gradient(45deg, transparent, rgba(139, 92, 246, 0.4), transparent);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            z-index: -1;
+        }
+
+        .back-to-top-btn:hover::before {
+            opacity: 1;
+        }
+
+        /* 页面加载动画 */
+        .page-loader {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+            transition: opacity 0.8s ease, visibility 0.8s ease;
+        }
+
+        .page-loader.hidden {
+            opacity: 0;
+            visibility: hidden;
+        }
+
+        .loader-content {
+            text-align: center;
+            color: #ffffff;
+        }
+
+        .loader-logo {
+            font-size: 4rem;
+            font-family: 'LASER', 'Arial Black', sans-serif;
+            color: #8b5cf6;
+            margin-bottom: 30px;
+            opacity: 0;
+            animation: loaderFadeIn 1s ease forwards;
+        }
+
+        .loader-text {
+            font-size: 1.2rem;
+            color: #cccccc;
+            opacity: 0;
+            animation: loaderFadeIn 1s ease forwards 0.5s;
+        }
+
+        .loader-progress {
+            width: 200px;
+            height: 3px;
+            background: rgba(139, 92, 246, 0.2);
+            border-radius: 2px;
+            margin: 30px auto 0;
+            overflow: hidden;
+            opacity: 0;
+            animation: loaderFadeIn 1s ease forwards 1s;
+        }
+
+        .loader-progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #8b5cf6, #a855f7);
+            border-radius: 2px;
+            width: 0%;
+            animation: loaderProgress 2s ease forwards 1.5s;
+        }
+
+        @keyframes loaderFadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes loaderProgress {
+            from {
+                width: 0%;
+            }
+            to {
+                width: 100%;
+            }
+        }
+
+        /* 性能优化 - 减少重绘 */
+        .optimized-animation {
+            will-change: transform, opacity;
+        }
+
+        /* 平滑滚动 */
+        html {
+            scroll-behavior: smooth;
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            /* 更新CSS变量值 */
+            :root {
+                --hero-container-width: 90vw;
+                --hero-container-height: 80vh;
+                --triangle-width: 315px;
+                --triangle-height: 246px;
+                --triangle-top: 240px;
+                --prism-top: 340px;
+                --x-top: 403px;
+                --tagline-top: 500px;
+                --scroll-hint-top: 570px;
+            }
+            
+            .prism-nav {
+                display: none;
+            }
+            
+            .content-area.with-nav {
+                margin-left: 0;
+            }
+            
+            /* 首页容器响应式调整 */
+            .main-container {
+                max-width: 400px;
+                position: relative;
+                justify-content: center;
+                align-items: center;
+                padding: 0 20px;
+            }
+            
+            /* 确保所有元素在移动端居中 */
+            .triangle-wrapper,
+            .prism-wrapper,
+            .x-wrapper,
+            .tagline-wrapper,
+            .scroll-hint-wrapper {
+                position: absolute;
+                left: 50%;
+                transform: translateX(-50%);
+            }
+            
+            /* 使用CSS变量确保更精确的位置控制 */
+            .triangle-wrapper {
+                width: var(--triangle-width);
+                height: var(--triangle-height);
+            }
+            
+            /* PRISM文字响应式调整 */
+            .prism-text {
+                font-size: clamp(2.5rem, 8vw, 3rem);
+                gap: clamp(6px, 1.5vw, 8px);
+                letter-spacing: clamp(4px, 1.5vw, 8px);
+            }
+            
+            /* X文字响应式调整 */
+            .x-text {
+                font-size: clamp(1.8rem, 6vw, 2.2rem);
+                letter-spacing: clamp(3px, 1.2vw, 6px);
+            }
+            
+            /* 品牌标语响应式调整 */
+            .tagline {
+                font-size: clamp(1.1rem, 3.5vw, 1.3rem);
+                padding: 0 20px;
+                white-space: normal;
+            }
+            
+            /* 滚动提示响应式调整 */
+            .scroll-hint {
+                font-size: clamp(0.9rem, 2.8vw, 1.1rem);
+            }
+            
+            /* 回到顶部按钮响应式调整 */
+            .back-to-top-btn {
+                bottom: 20px;
+                right: 20px;
+                width: 55px;
+                height: 55px;
+            }
+            
+            /* 右侧进度指示器响应式调整 */
+            .progress-indicator {
+                right: 20px;
+                gap: 20px;
+            }
+            
+            .progress-dot {
+                width: 12px;
+                height: 12px;
+                border-width: 2px;
+            }
+            
+            /* 字母展示区域响应式调整 */
+            .section-letter {
+                font-size: 8rem;
+                -webkit-text-stroke: 2px #8b5cf6;
+            }
+            
+            .section-title {
+                font-size: 2.5rem;
+            }
+            
+            .section-description {
+                font-size: 1.4rem;
+                padding: 0 20px;
+            }
+            
+            .section-details {
+                grid-template-columns: 1fr;
+                gap: 25px;
+                margin-top: 40px;
+                padding: 0 20px;
+            }
+            
+            .detail-card {
+                padding: 30px 25px;
+            }
+            
+            .detail-card h4 {
+                font-size: 1.3rem;
+            }
+            
+            .detail-card p {
+                font-size: 1rem;
+            }
+
+            /* 关于我们区域响应式调整 */
+            .about-title {
+                font-size: 2.8rem;
+                margin-bottom: 40px;
+            }
+            
+            .about-section {
+                padding: 80px 30px;
+            }
+
+            .about-timeline {
+                margin-top: 50px;
+                padding: 0 20px;
+            }
+
+                    .about-timeline::before {
+            left: 10px;
+            width: 2px;
+            z-index: -1;
+        }
+
+            .timeline-item {
+                width: 85%;
+                margin-bottom: 60px;
+                transform: translateY(40px) scale(0.9);
+            }
+
+            .timeline-item:nth-child(odd),
+            .timeline-item:nth-child(even) {
+                left: 0;
+                text-align: left;
+            }
+
+            .timeline-item:nth-child(odd) .timeline-content,
+            .timeline-item:nth-child(even) .timeline-content {
+                padding-left: 50px;
+                padding-right: 20px;
+            }
+
+            .timeline-item:nth-child(odd)::before,
+            .timeline-item:nth-child(even)::before {
+                left: 15px;
+                right: auto;
+                width: 16px;
+                height: 16px;
+            }
+
+            .timeline-item:nth-child(odd)::after,
+            .timeline-item:nth-child(even)::after {
+                left: 31px;
+                right: auto;
+                width: 30px;
+            }
+
+            .timeline-item:hover {
+                transform: translateY(-10px) scale(1.01);
+            }
+
+            .about-section.active .timeline-item:nth-child(1),
+            .about-section.active .timeline-item:nth-child(2),
+            .about-section.active .timeline-item:nth-child(3) {
+                transform: translateY(0) scale(1);
+            }
+
+            .timeline-year {
+                font-size: 2.6rem;
+                margin-bottom: 20px;
+            }
+
+            .timeline-content {
+                font-size: 1.2rem;
+                padding: 30px 25px;
+            }
+
+            .timeline-content strong {
+                font-size: 1.4rem;
+                margin-bottom: 12px;
+            }
+        }
+        
+        /* 超小屏幕适配 */
+        @media (max-width: 480px) {
+            /* 更新CSS变量值 */
+            :root {
+                --hero-container-width: 95vw;
+                --hero-container-height: 85vh;
+                --triangle-width: 270px;
+                --triangle-height: 202px;
+                --triangle-top: 200px;
+                --prism-top: 280px;
+                --x-top: 346px;
+                --tagline-top: 440px;
+                --scroll-hint-top: 510px;
+            }
+            
+            .main-container {
+                padding: 0 15px;
+            }
+            
+            .triangle-wrapper {
+                width: var(--triangle-width);
+                height: var(--triangle-height);
+            }
+            
+            .prism-text {
+                font-size: 2.5rem;
+                gap: 6px;
+                letter-spacing: 6px;
+                flex-wrap: wrap;
+                justify-content: center;
+                text-align: center;
+            }
+            
+            .x-text {
+                font-size: 1.8rem;
+                letter-spacing: 4px;
+            }
+            
+            .tagline {
+                font-size: 1.2rem;
+            }
+            
+            .scroll-hint {
+                font-size: 1rem;
+            }
+        }
+        
+        /* 横屏手机适配 */
+        @media (max-width: 768px) and (orientation: landscape) {
+            /* 更新CSS变量值 */
+            :root {
+                --hero-container-height: 90vh;
+                --triangle-width: 224px;
+                --triangle-height: 168px;
+                --triangle-top: 160px;
+                --prism-top: 230px;
+                --x-top: 278px;
+                --tagline-top: 350px;
+                --scroll-hint-top: 410px;
+            }
+        }
+        
+        /* 触摸设备优化 */
+        @media (hover: none) and (pointer: coarse) {
+            .nav-letter {
+                min-height: 60px;
+                min-width: 60px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+            
+            .detail-card,
+            .timeline-item {
+                cursor: default;
+            }
+            
+            .back-to-top-btn {
+                min-height: 60px;
+                min-width: 60px;
+            }
+        }
+        
+        /* 实时数据更新样式 */
+        @keyframes dataChangePulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); background: rgba(34, 197, 94, 0.1); }
+            100% { transform: scale(1); }
+        }
+        
+        @keyframes slideInRight {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        
+        @keyframes slideOutRight {
+            from { transform: translateX(0); opacity: 1; }
+            to { transform: translateX(100%); opacity: 0; }
+        }
+        
+        .data-changed {
+            transition: all 0.3s ease;
+        }
+        
+        .refresh-btn:hover {
+            transform: scale(1.1);
+        }
+
+        .update-status {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .metric-row.data-changed,
+        .detail-metric.data-changed {
+            border-color: rgba(34, 197, 94, 0.5) !important;
+            box-shadow: 0 0 15px rgba(34, 197, 94, 0.3);
+        }
+        
+        /* 高分辨率屏幕优化 */
+        @media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+            .triangle-wrapper svg {
+                shape-rendering: geometricPrecision;
+            }
+            
+            .timeline-item::before {
+                border-width: 3px;
+            }
+        }
+        
+        /* MyFXBook 小部件动画 */
+        @keyframes float {
+            0%, 100% {
+                transform: translateY(0px) rotate(0deg);
+            }
+            50% {
+                transform: translateY(-20px) rotate(180deg);
+            }
+        }
+        
+        @keyframes cardHover {
+            0% {
+                transform: translateY(0) scale(1);
+                box-shadow: 0 25px 50px rgba(0, 0, 0, 0.3);
+            }
+            100% {
+                transform: translateY(-10px) scale(1.02);
+                box-shadow: 0 35px 70px rgba(0, 0, 0, 0.4);
+            }
+        }
+        
+        @keyframes infoCardHover {
+            0% {
+                transform: translateY(0) scale(1);
+            }
+            100% {
+                transform: translateY(-8px) scale(1.05);
+            }
+        }
+        
+        @keyframes titleGlow {
+            0%, 100% {
+                text-shadow: 0 0 30px rgba(34, 197, 94, 0.3);
+            }
+            50% {
+                text-shadow: 0 0 50px rgba(34, 197, 94, 0.6);
+            }
+        }
+        
+        /* 账户追踪系统样式增强 */
+        .account-data-card {
+            cursor: pointer;
+        }
+        
+        .account-data-card:hover {
+            animation: cardHover 0.4s ease forwards;
+        }
+        
+        .account-data-card:hover .card-border {
+            opacity: 0.6;
+        }
+        
+        .account-data-card:hover .card-header {
+            opacity: 1;
+        }
+        
+        /* 标题动画效果 */
+        .account-title {
+            animation: titleGlow 3s ease-in-out infinite;
+        }
+        
+        /* 账户信息卡片悬停效果 */
+        .account-info-grid .info-item:hover {
+            background: rgba(255, 255, 255, 0.08);
+        }
+        
+        /* 策略面板悬停效果 */
+        .strategy-panel:hover .panel-border {
+            opacity: 0.5;
+        }
+        
+        .widget-overlay {
+            opacity: 0;
+        }
+        
+        .widget-container a:hover .widget-overlay {
+            opacity: 1;
+        }
+        
+        .widget-container a:hover img {
+            transform: scale(1.02);
+            border-color: rgba(34, 197, 94, 0.4);
+        }
+        
+        /* 策略分析面板样式 */
+        .strategy-panel {
+            transition: all 0.4s ease;
+        }
+        
+        .strategy-panel:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.4);
+        }
+        
+        .core-metrics .metric-card {
+            transition: all 0.3s ease;
+        }
+        
+        .core-metrics .metric-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+        }
+        
+        .detailed-stats .stat-item {
+            transition: all 0.3s ease;
+        }
+        
+        .detailed-stats .stat-item:hover {
+            transform: scale(1.05);
+            background: rgba(255, 255, 255, 0.08);
+        }
+        
+        /* 特色卡片样式 */
+        .feature-card {
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .feature-card:hover {
+            animation: infoCardHover 0.3s ease forwards;
+            border-color: rgba(255, 255, 255, 0.3);
+        }
+        
+        /* 账户信息卡片样式 */
+        .account-info-grid .info-item {
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .account-info-grid .info-item:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+            border-color: rgba(255, 255, 255, 0.3);
+        }
+        
+        .info-item .info-icon {
+            transition: all 0.3s ease;
+        }
+        
+        .info-item:hover .info-icon {
+            transform: scale(1.1);
+        }
+        
+        .info-card {
+            cursor: pointer;
+        }
+        
+        .info-card:hover {
+            animation: infoCardHover 0.3s ease forwards;
+            border-color: rgba(255, 255, 255, 0.3);
+        }
+        
+        /* 数据面板悬停效果 */
+        .data-panel {
+            cursor: pointer;
+        }
+        
+        .data-panel:hover {
+            animation: cardHover 0.4s ease forwards;
+        }
+        
+        .data-panel:hover .panel-border {
+            opacity: 0.6;
+        }
+        
+        .data-panel:hover .panel-header {
+            opacity: 1;
+        }
+        
+        .metric-row:hover {
+            transform: translateX(5px);
+            border-color: rgba(255, 255, 255, 0.3);
+            transition: all 0.3s ease;
+        }
+        
+        .detail-metric:hover {
+            transform: scale(1.05);
+            border-color: rgba(255, 255, 255, 0.3);
+            transition: all 0.3s ease;
+        }
+        
+        .myfxbook-title {
+            animation: titleGlow 3s ease-in-out infinite;
+        }
+        
+        .floating-shape {
+            animation: float 6s ease-in-out infinite;
+        }
+        
+        .floating-shape:nth-child(2) {
+            animation-delay: -2s;
+        }
+        
+        .floating-shape:nth-child(3) {
+            animation-delay: -4s;
+        }
+        
+        /* 移动端响应式调整 */
+        @media (max-width: 768px) {
+            .myfxbook-title {
+                font-size: 2.8rem;
+            }
+            
+            .widget-data-container {
+                grid-template-columns: 1fr;
+                gap: 30px;
+                padding: 0 20px;
+            }
+            
+            .widget-card,
+            .data-panel {
+                padding: 25px;
+                margin: 0;
+            }
+            
+            .widget-title h3 {
+                font-size: 1.5rem;
+            }
+            
+            .data-title h3 {
+                font-size: 1.5rem;
+            }
+            
+            .main-metrics .metric-row {
+                padding: 15px;
+                margin-bottom: 20px;
+            }
+            
+            .metric-value {
+                font-size: 1.1rem;
+            }
+            
+            .detailed-metrics {
+                grid-template-columns: 1fr;
+                gap: 12px;
+            }
+            
+            .info-cards {
+                grid-template-columns: 1fr;
+                gap: 20px;
+                padding: 0 20px;
+            }
+            
+            .info-card {
+                padding: 20px;
+            }
+            
+            .floating-shape {
+                display: none;
+            }
+        }
+    </style>
+</head>
+    <body>
+        <!-- 页面加载器 -->
+    <div class="page-loader" id="pageLoader">
+        <div class="loader-content">
+            <div class="loader-logo">PRISM X</div>
+            <div class="loader-text">正在加载棱镜量化...</div>
+            <div class="loader-progress">
+                <div class="loader-progress-bar"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 自定义光标 -->
+    <div class="cursor" id="cursor"></div>
+
+    <!-- 左侧PRISM导航 -->
+    <div class="prism-nav" id="prismNav">
+        <div class="nav-letter">P</div>
+        <div class="nav-letter">R</div>
+        <div class="nav-letter">I</div>
+        <div class="nav-letter">S</div>
+        <div class="nav-letter">M</div>
+    </div>
+
+    <!-- 右侧进度指示器 -->
+    <div class="progress-indicator">
+        <div class="progress-dot"></div>
+        <div class="progress-dot"></div>
+        <div class="progress-dot"></div>
+        <div class="progress-dot"></div>
+        <div class="progress-dot"></div>
+        <div class="progress-dot"></div>
+        <div class="progress-dot"></div>
+    </div>
+
+    <!-- 主内容区域 -->
+    <div class="main-content">
+        <!-- Logo首页 -->
+        <section class="hero-section">
+            <div class="main-container">
+                
+                <!-- 三角形 -->
+                <div class="triangle-wrapper">
+                    <svg viewBox="0 0 400 350" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
+                        <polygon points="200,20 20,330 380,330" 
+                                fill="none" 
+                                stroke="rgba(255, 255, 255, 0.8)" 
+                                stroke-width="3"/>
+                    </svg>
+                </div>
+                
+                <!-- PRISM -->
+                <div class="prism-wrapper">
+                    <div class="prism-text">
+                        <div class="letter" data-letter="P">P</div>
+                        <div class="letter" data-letter="R">R</div>
+                        <div class="letter" data-letter="I">I</div>
+                        <div class="letter" data-letter="S">S</div>
+                        <div class="letter" data-letter="M">M</div>
+                    </div>
+                </div>
+                
+                <!-- X -->
+                <div class="x-wrapper">
+                    <div class="x-text" data-letter="X">X</div>
+                </div>
+                
+                <!-- 品牌标语 -->
+                <div class="tagline-wrapper">
+                    <div class="tagline">
+                        <div class="tagline-top">棱镜量化</div>
+                    </div>
+                </div>
+                
+                <!-- 滚动提示 -->
+                <div class="scroll-hint-wrapper">
+                    <div class="scroll-hint" id="scrollHint">
+                        <div>探索我们的价值主张</div>
+                        <div style="font-size: 2rem; margin-top: 10px;">↓</div>
+                    </div>
+                </div>
+                
+            </div>
+            
+            <!-- 独立的回到顶部按钮 -->
+            <div class="back-to-top-btn" id="backToTopBtn">
+                <div class="icon"></div>
+            </div>
+            
+            <!-- 电流网络容器 -->
+            <div class="network-container" id="networkContainer"></div>
+        </section>
+
+        <!-- 内容展示区域 -->
+        <div class="content-area" id="contentArea">
+            <!-- P - Precision -->
+            <section class="letter-section">
+                <div class="letter-content">
+                    <div class="section-letter">P</div>
+                    <h2 class="section-title">Precision 精准</h2>
+                    <p class="section-description">
+                        光线通过棱镜的精确折射，我们将复杂的市场数据转化为精准的交易信号。每一个策略参数都经过严格的数学验证和实盘检验。
+                    </p>
+                    <div class="section-details">
+                        <div class="detail-card">
+                            <h4>3年深度研发</h4>
+                            <p>持续的策略优化和参数调校，确保每个交易决策的精确性</p>
+                        </div>
+                        <div class="detail-card">
+                            <h4>8年实战经验</h4>
+                            <p>丰富的市场经验转化为精确的风险控制和机会识别</p>
+                        </div>
+                        <div class="detail-card">
+                            <h4>严格回测验证</h4>
+                            <p>每个策略都经过历史数据的严格测试和验证</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- R - Risk-First -->
+            <section class="letter-section">
+                <div class="letter-content">
+                    <div class="section-letter">R</div>
+                    <h2 class="section-title">Risk-First 风险优先</h2>
+                    <p class="section-description">
+                        "风险第一，收益第二"是我们不变的投资哲学。就像棱镜能够分离有害紫外线，我们的系统能够识别和规避市场风险。
+                    </p>
+                    <div class="section-details">
+                        <div class="detail-card">
+                            <h4>多重风控机制</h4>
+                            <p>时间风控、解套算法、人工监控三重保护</p>
+                        </div>
+                        <div class="detail-card">
+                            <h4>透明风险展示</h4>
+                            <p>真实展示包括回撤在内的完整交易表现</p>
+                        </div>
+                        <div class="detail-card">
+                            <h4>快速应对机制</h4>
+                            <p>基于3年优化的风险应对和处置流程</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- I - Intelligence -->
+            <section class="letter-section">
+                <div class="letter-content">
+                    <div class="section-letter">I</div>
+                    <h2 class="section-title">Intelligence 智能</h2>
+                    <p class="section-description">
+                        运用人工智能和算法交易技术，持续优化和研发策略，让每一笔交易都在最优时机执行。
+                    </p>
+                    <div class="section-details">
+                        <div class="detail-card">
+                            <h4>EA自动化交易</h4>
+                            <p>24小时不间断的智能交易执行系统</p>
+                        </div>
+                        <div class="detail-card">
+                            <h4>AI优化策略</h4>
+                            <p>利用现有的科技，不断优化，改进我们的策略</p>
+                        </div>
+                        <div class="detail-card">
+                            <h4>持续算法优化</h4>
+                            <p>每段时间定期优化参数，确保能够符合市场行情</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- S - Stability -->
+            <section class="letter-section">
+                <div class="letter-content">
+                    <div class="section-letter">S</div>
+                    <h2 class="section-title">Stability 稳健</h2>
+                    <p class="section-description">
+                        稳健是我们的核心特质。我们测试策略都会先关注策略的稳定性，确保可以在不同的市场环境存活。
+                    </p>
+                    <div class="section-details">
+                        <div class="detail-card">
+                            <h4>低风险策略开发</h4>
+                            <p>持续开发以"稳定"为主的EA</p>
+                        </div>
+                        <div class="detail-card">
+                            <h4>收益风险平衡</h4>
+                            <p>比起收益率，我们更加优先考虑回撤</p>
+                        </div>
+                        <div class="detail-card">
+                            <h4>长期实盘验证</h4>
+                            <p>所有策略都经过充分的实盘测试</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- M - Multi-Strategy -->
+            <section class="letter-section">
+                <div class="letter-content">
+                    <div class="section-letter">M</div>
+                    <h2 class="section-title">Multi-Strategy 多策略</h2>
+                    <p class="section-description">
+                        就像棱镜将白光分解为丰富的光谱，我们提供多元化的量化策略，满足不同投资者的风险偏好和收益期望。
+                    </p>
+                    <div class="section-details">
+                        <div class="detail-card">
+                            <h4>高回报</h4>
+                            <p>适合风险偏好者，绝对可以满足你的冒险精神</p>
+                        </div>
+                        <div class="detail-card">
+                            <h4>高稳定</h4>
+                            <p>适合追求长期的投资者，以稳定为第一需求</p>
+                        </div>
+                        <div class="detail-card">
+                            <h4>更多策略研发中</h4>
+                            <p>持续开发适应不同市场环境的量化策略</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 关于我们区域 -->
+            <section class="about-section">
+                <div class="about-content">
+                    <h2 class="about-title">关于我们</h2>
+                    
+                    <div class="about-timeline">
+                        <div class="timeline-item">
+                            <div class="timeline-year">2023</div>
+                            <div class="timeline-content">
+                                <strong>团队建立</strong>
+                                第一个EA诞生，开始优化
+                                筹备不同类型的<span class="timeline-highlight">EA策略</span>
+                            </div>
+                        </div>
+                        
+                        <div class="timeline-item">
+                            <div class="timeline-year">2024</div>
+                            <div class="timeline-content">
+                                <strong>实盘验证</strong>
+                                持续优化EA参数
+                                EA投入<span class="timeline-highlight">实盘交易</span>，验证成果
+                            </div>
+                        </div>
+                        
+                        <div class="timeline-item">
+                            <div class="timeline-year">2025</div>
+                            <div class="timeline-content">
+                                <strong>持续创新</strong>
+                                研发不同策略EA，应对<span class="timeline-highlight">多元需求</span>
+                                维护现有EA，滚动优化参数以符合市场
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 黄金猎手 - 简洁设计 -->
+            <section class="golden-hunter" style="padding: 100px 0; background: linear-gradient(135deg, #000000 0%, #0f0f23 100%); position: relative;">
+                <div class="container" style="max-width: 1200px; margin: 0 auto; padding: 0 20px;">
+                    <!-- 标题区域 -->
+                    <div class="header" style="text-align: center; margin-bottom: 60px;">
+                        <h2 style="font-size: 3.5rem; font-weight: 700; color: #8b5cf6; margin-bottom: 20px; letter-spacing: 2px;">
+                            账户表现
+                        </h2>
+
+                            </div>
+                            
+                    <!-- 账户信息 -->
+                    <div class="content" style="margin-bottom: 60px;">
+                        <!-- 账户选择 -->
+                        <div class="account-selector" style="max-width: 900px; margin: 0 auto 40px auto;">
+                            <div style="text-align: center; margin-bottom: 30px;">
+                                <h3 style="font-size: 1.8rem; color: #ffffff; font-weight: 600; margin-bottom: 20px;">
+                                    选择账户
+                                </h3>
+                                                                <div class="account-tabs" style="display: flex; justify-content: center; gap: 20px;">
+                                    <div class="account-tab active" style="background: linear-gradient(135deg, rgba(139, 92, 246, 0.3), rgba(168, 85, 247, 0.2)); border: 2px solid #8b5cf6; border-radius: 15px; padding: 15px 30px; cursor: pointer; transition: all 0.3s ease;">
+                                        <span style="color: #ffffff; font-weight: 600; font-size: 1.1rem;">黄金猎手</span>
+                                </div>
+                                    <div class="account-tab" style="background: rgba(139, 92, 246, 0.1); border: 2px solid rgba(139, 92, 246, 0.3); border-radius: 15px; padding: 15px 30px; cursor: pointer; transition: all 0.3s ease;">
+                                        <span style="color: #a1a1aa; font-weight: 500; font-size: 1.1rem;">天网系统</span>
+                                            </div>
+                                        </div>
+                            </div>
+                                </div>
+                                
+                        <!-- 数据状态提示 -->
+                        <div id="dataStatus" style="text-align: center; margin-bottom: 20px; display: none;">
+                            <div class="status-message" style="padding: 15px 25px; border-radius: 10px; font-weight: 500; font-size: 1rem;">
+                                <span class="status-icon">⚠️</span>
+                                <span class="status-text">数据获取失败，显示上次成功的数据</span>
+                            </div>
+                        </div>
+                        
+                        <!-- 关键指标 -->
+                        <div class="metrics-container" style="max-width: 900px; margin: 0 auto;">
+                            <div style="text-align: center; margin-bottom: 40px;">
+                                <h3 style="font-size: 2rem; color: #ffffff; font-weight: 600;">
+                                    关键指标
+                                </h3>
+                            </div>
+                            
+                            <!-- 指标网格：2行3列，所有格子大小一致 -->
+                            <div class="metrics-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 25px;">
+                                <!-- 第一行 -->
+                                <div class="metric-card" style="background: linear-gradient(135deg, rgba(139, 92, 246, 0.15), rgba(168, 85, 247, 0.1)); border: 1px solid rgba(139, 92, 246, 0.3); border-radius: 20px; padding: 30px; text-align: center; position: relative; overflow: hidden; height: 180px; display: flex; flex-direction: column; justify-content: center;">
+                                    <div class="metric-bg" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: linear-gradient(45deg, transparent 30%, rgba(139, 92, 246, 0.05) 50%, transparent 70%); opacity: 0; transition: opacity 0.3s ease;"></div>
+                                    <div class="metric-content" style="position: relative; z-index: 1;">
+                                        <div class="metric-label" style="color: #a1a1aa; font-size: 0.9rem; margin-bottom: 15px; font-weight: 500; text-transform: uppercase; letter-spacing: 1px;">账户余额</div>
+                                        <div class="balance-value" style="color: #8b5cf6; font-size: 2rem; font-weight: 800; margin-bottom: 8px;">--</div>
+                                        <div class="metric-unit" style="color: #8b5cf6; font-size: 0.8rem; opacity: 0.7;">USD</div>
+                                </div>
+                                    </div>
+                                    
+                                <div class="metric-card" style="background: linear-gradient(135deg, rgba(139, 92, 246, 0.15), rgba(168, 85, 247, 0.1)); border: 1px solid rgba(139, 92, 246, 0.3); border-radius: 20px; padding: 30px; text-align: center; position: relative; overflow: hidden; height: 180px; display: flex; flex-direction: column; justify-content: center;">
+                                    <div class="metric-bg" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: linear-gradient(45deg, transparent 30%, rgba(139, 92, 246, 0.05) 50%, transparent 70%); opacity: 0; transition: opacity 0.3s ease;"></div>
+                                    <div class="metric-content" style="position: relative; z-index: 1;">
+                                        <div class="metric-label" style="color: #a1a1aa; font-size: 0.9rem; margin-bottom: 15px; font-weight: 500; text-transform: uppercase; letter-spacing: 1px;">总收益</div>
+                                        <div class="profit-value" style="color: #8b5cf6; font-size: 2rem; font-weight: 800; margin-bottom: 8px;">--</div>
+                                        <div class="metric-unit" style="color: #8b5cf6; font-size: 0.8rem; opacity: 0.7;">USD</div>
+                                    </div>
+                                    </div>
+                                    
+                                <div class="metric-card" style="background: linear-gradient(135deg, rgba(139, 92, 246, 0.15), rgba(168, 85, 247, 0.1)); border: 1px solid rgba(139, 92, 246, 0.3); border-radius: 20px; padding: 30px; text-align: center; position: relative; overflow: hidden; height: 180px; display: flex; flex-direction: column; justify-content: center;">
+                                    <div class="metric-bg" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: linear-gradient(45deg, transparent 30%, rgba(139, 92, 246, 0.05) 50%, transparent 70%); opacity: 0; transition: opacity 0.3s ease;"></div>
+                                    <div class="metric-content" style="position: relative; z-index: 1;">
+                                        <div class="metric-label" style="color: #a1a1aa; font-size: 0.9rem; margin-bottom: 15px; font-weight: 500; text-transform: uppercase; letter-spacing: 1px;">收益率</div>
+                                        <div class="gain-value" style="color: #8b5cf6; font-size: 2rem; font-weight: 800; margin-bottom: 8px;">--</div>
+                                        <div class="metric-unit" style="color: #8b5cf6; font-size: 0.8rem; opacity: 0.7;">%</div>
+                                    </div>
+                                </div>
+                                
+                                <!-- 第二行 -->
+                                <div class="metric-card" style="background: linear-gradient(135deg, rgba(139, 92, 246, 0.15), rgba(168, 85, 247, 0.1)); border: 1px solid rgba(139, 92, 246, 0.3); border-radius: 20px; padding: 30px; text-align: center; position: relative; overflow: hidden; height: 180px; display: flex; flex-direction: column; justify-content: center;">
+                                    <div class="metric-bg" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: linear-gradient(45deg, transparent 30%, rgba(139, 92, 246, 0.05) 50%, transparent 70%); opacity: 0; transition: opacity 0.3s ease;"></div>
+                                    <div class="metric-content" style="position: relative; z-index: 1;">
+                                        <div class="metric-label" style="color: #a1a1aa; font-size: 0.9rem; margin-bottom: 15px; font-weight: 500; text-transform: uppercase; letter-spacing: 1px;">最大回撤</div>
+                                        <div class="drawdown-value" style="color: #8b5cf6; font-size: 2rem; font-weight: 800; margin-bottom: 8px;">--</div>
+                                        <div class="metric-unit" style="color: #8b5cf6; font-size: 0.8rem; opacity: 0.7;">%</div>
+                                    </div>
+                                    </div>
+                                    
+                                <div class="metric-card" style="background: linear-gradient(135deg, rgba(139, 92, 246, 0.15), rgba(168, 85, 247, 0.1)); border: 1px solid rgba(139, 92, 246, 0.3); border-radius: 20px; padding: 30px; text-align: center; position: relative; overflow: hidden; height: 180px; display: flex; flex-direction: column; justify-content: center;">
+                                    <div class="metric-bg" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: linear-gradient(45deg, transparent 30%, rgba(139, 92, 246, 0.05) 50%, transparent 70%); opacity: 0; transition: opacity 0.3s ease;"></div>
+                                    <div class="metric-content" style="position: relative; z-index: 1;">
+                                        <div class="metric-label" style="color: #a1a1aa; font-size: 0.9rem; margin-bottom: 15px; font-weight: 500; text-transform: uppercase; letter-spacing: 1px;">日收益</div>
+                                        <div class="daily-value" style="color: #8b5cf6; font-size: 2rem; font-weight: 800; margin-bottom: 8px;">--</div>
+                                        <div class="metric-unit" style="color: #8b5cf6; font-size: 0.8rem; opacity: 0.7;">%</div>
+                                    </div>
+                                </div>
+                                
+                                <div class="metric-card" style="background: linear-gradient(135deg, rgba(139, 92, 246, 0.15), rgba(168, 85, 247, 0.1)); border: 1px solid rgba(139, 92, 246, 0.3); border-radius: 20px; padding: 30px; text-align: center; position: relative; overflow: hidden; height: 180px; display: flex; flex-direction: column; justify-content: center;">
+                                    <div class="metric-bg" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: linear-gradient(45deg, transparent 30%, rgba(139, 92, 246, 0.05) 50%, transparent 70%); opacity: 0; transition: opacity 0.3s ease;"></div>
+                                    <div class="metric-content" style="position: relative; z-index: 1;">
+                                        <div class="metric-label" style="color: #a1a1aa; font-size: 0.9rem; margin-bottom: 15px; font-weight: 500; text-transform: uppercase; letter-spacing: 1px;">月收益</div>
+                                        <div class="monthly-value" style="color: #8b5cf6; font-size: 2rem; font-weight: 800; margin-bottom: 8px;">--</div>
+                                        <div class="metric-unit" style="color: #8b5cf6; font-size: 0.8rem; opacity: 0.7;">%</div>
+                                </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // 实时数据更新系统
+            // 全新的黄金猎手实时数据系统 - 基于MyFXBook API
+            console.log('🚀 黄金猎手系统正在启动...');
+
+
+
+
+
+            // 页面加载器逻辑
+            const pageLoader = document.getElementById('pageLoader');
+            
+            // 模拟加载完成
+            setTimeout(() => {
+                if (pageLoader) {
+                    pageLoader.classList.add('hidden');
+                    // 完全隐藏后移除元素
+                    setTimeout(() => {
+                        if (pageLoader && pageLoader.parentNode) {
+                            pageLoader.parentNode.removeChild(pageLoader);
+                        }
+                    }, 800);
+                }
+            }, 3000); // 3秒后隐藏加载器
+
+            // 安全获取所有元素
+            const cursor = document.getElementById('cursor');
+            const prismNav = document.getElementById('prismNav');
+            const sections = document.querySelectorAll('section');
+            const navLetters = document.querySelectorAll('.nav-letter');
+            const progressDots = document.querySelectorAll('.progress-dot');
+            const contentArea = document.querySelector('.content-area');
+            
+            let currentSection = 0;
+            let lettersAnimated = false;
+            let mouseX = 0, mouseY = 0;
+            let cursorX = 0, cursorY = 0;
+
+            // 光标跟随效果
+            if (cursor) {
+                document.addEventListener('mousemove', (e) => {
+                    mouseX = e.clientX;
+                    mouseY = e.clientY;
+                });
+
+                function animateCursor() {
+                    cursorX += (mouseX - cursorX) * 0.15;
+                    cursorY += (mouseY - cursorY) * 0.15;
+                    cursor.style.left = cursorX - 10 + 'px';
+                    cursor.style.top = cursorY - 10 + 'px';
+                    requestAnimationFrame(animateCursor);
+                }
+                animateCursor();
+            }
+
+            // 电流网络交互效果
+            const heroSection = document.querySelector('.hero-section');
+            const networkContainer = document.getElementById('networkContainer');
+            let isNetworkActive = false;
+            let nodes = [];
+            let mouseNode = null;
+            let connections = [];
+            let dataPackets = [];
+
+            if (heroSection && networkContainer) {
+                // 创建网络节点
+                function createNodes() {
+                    const rect = heroSection.getBoundingClientRect();
+                    nodes = [];
+                    
+                    // 在网格中创建节点
+                    const cols = 6;
+                    const rows = 4;
+                    const marginX = 100;
+                    const marginY = 80;
+                    
+                    for (let i = 0; i < cols; i++) {
+                        for (let j = 0; j < rows; j++) {
+                            // 添加一些随机偏移，让网格看起来更自然
+                            const offsetX = (Math.random() - 0.5) * 50;
+                            const offsetY = (Math.random() - 0.5) * 40;
+                            
+                            const node = {
+                                x: marginX + (i * (rect.width - 2 * marginX)) / (cols - 1) + offsetX,
+                                y: marginY + (j * (rect.height - 2 * marginY)) / (rows - 1) + offsetY,
+                                element: null,
+                                id: i * rows + j,
+                                active: false
+                            };
+                            
+                            // 创建DOM元素
+                            const nodeElement = document.createElement('div');
+                            nodeElement.className = 'network-node';
+                            nodeElement.style.left = node.x + 'px';
+                            nodeElement.style.top = node.y + 'px';
+                            networkContainer.appendChild(nodeElement);
+                            
+                            node.element = nodeElement;
+                            nodes.push(node);
+                        }
+                    }
+                    
+                    // 创建鼠标节点
+                    mouseNode = {
+                        x: 0,
+                        y: 0,
+                        element: null
+                    };
+                    
+                    const mouseElement = document.createElement('div');
+                    mouseElement.className = 'network-node mouse-node';
+                    networkContainer.appendChild(mouseElement);
+                    mouseNode.element = mouseElement;
+                }
+
+                // 计算两点间距离
+                function getDistance(point1, point2) {
+                    const dx = point1.x - point2.x;
+                    const dy = point1.y - point2.y;
+                    return Math.sqrt(dx * dx + dy * dy);
+                }
+
+                // 创建连接线
+                function createConnection(node1, node2, isStrong = false) {
+                    const connection = document.createElement('div');
+                    connection.className = `connection-line ${isStrong ? 'strong' : ''}`;
+                    
+                    const dx = node2.x - node1.x;
+                    const dy = node2.y - node1.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+                    
+                    connection.style.left = node1.x + 'px';
+                    connection.style.top = node1.y + 'px';
+                    connection.style.width = distance + 'px';
+                    connection.style.transform = `rotate(${angle}deg)`;
+                    
+                    networkContainer.appendChild(connection);
+                    return connection;
+                }
+
+                // 创建数据包
+                function createDataPacket(startNode, endNode) {
+                    const packet = document.createElement('div');
+                    packet.className = 'data-packet';
+                    networkContainer.appendChild(packet);
+                    
+                    const dx = endNode.x - startNode.x;
+                    const dy = endNode.y - startNode.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    
+                    let progress = 0;
+                    const animate = () => {
+                        progress += 0.02;
+                        if (progress <= 1) {
+                            const currentX = startNode.x + dx * progress;
+                            const currentY = startNode.y + dy * progress;
+                            packet.style.left = currentX + 'px';
+                            packet.style.top = currentY + 'px';
+                            packet.classList.add('active');
+                            requestAnimationFrame(animate);
+                        } else {
+                            packet.remove();
+                        }
+                    };
+                    
+                    animate();
+                }
+
+                // 更新网络
+                function updateNetwork(mouseX, mouseY) {
+                    // 更新鼠标节点位置
+                    mouseNode.x = mouseX;
+                    mouseNode.y = mouseY;
+                    mouseNode.element.style.left = mouseX + 'px';
+                    mouseNode.element.style.top = mouseY + 'px';
+                    mouseNode.element.classList.add('active');
+
+                    // 清除旧连接
+                    connections.forEach(conn => conn.remove());
+                    connections = [];
+
+                    // 激活附近的节点
+                    const maxDistance = 150;
+                    const strongConnectionDistance = 80;
+                    
+                    nodes.forEach(node => {
+                        const distance = getDistance(mouseNode, node);
+                        
+                        if (distance < maxDistance) {
+                            node.element.classList.add('active');
+                            node.active = true;
+                            
+                            // 创建到鼠标的连接
+                            const isStrong = distance < strongConnectionDistance;
+                            const connection = createConnection(node, mouseNode, isStrong);
+                            connection.classList.add('active');
+                            connections.push(connection);
+                            
+                            // 随机创建数据包
+                            if (Math.random() < 0.3 && isStrong) {
+                                setTimeout(() => {
+                                    createDataPacket(node, mouseNode);
+                                }, Math.random() * 1000);
+                            }
+                        } else {
+                            node.element.classList.remove('active');
+                            node.active = false;
+                        }
+                    });
+
+                    // 创建节点间连接
+                    for (let i = 0; i < nodes.length; i++) {
+                        if (!nodes[i].active) continue;
+                        
+                        for (let j = i + 1; j < nodes.length; j++) {
+                            if (!nodes[j].active) continue;
+                            
+                            const distance = getDistance(nodes[i], nodes[j]);
+                            if (distance < 120) {
+                                const connection = createConnection(nodes[i], nodes[j]);
+                                connection.classList.add('active');
+                                connections.push(connection);
+                                
+                                // 节点间数据包传输
+                                if (Math.random() < 0.2) {
+                                    setTimeout(() => {
+                                        createDataPacket(nodes[i], nodes[j]);
+                                    }, Math.random() * 2000);
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // 清除网络
+                function clearNetwork() {
+                    nodes.forEach(node => {
+                        node.element.classList.remove('active');
+                        node.active = false;
+                    });
+                    
+                    if (mouseNode && mouseNode.element) {
+                        mouseNode.element.classList.remove('active');
+                    }
+                    
+                    connections.forEach(conn => conn.remove());
+                    connections = [];
+                    
+                    // 清除所有数据包
+                    networkContainer.querySelectorAll('.data-packet').forEach(packet => {
+                        packet.remove();
+                    });
+                }
+
+                // 事件监听
+                heroSection.addEventListener('mouseenter', () => {
+                    isNetworkActive = true;
+                    heroSection.classList.add('network-active', 'mouse-active');
+                    if (nodes.length === 0) {
+                        createNodes();
+                    }
+                });
+
+                heroSection.addEventListener('mouseleave', () => {
+                    isNetworkActive = false;
+                    heroSection.classList.remove('network-active', 'mouse-active');
+                    clearNetwork();
+                });
+
+                heroSection.addEventListener('mousemove', (e) => {
+                    if (isNetworkActive) {
+                        const rect = heroSection.getBoundingClientRect();
+                        const mouseX = e.clientX - rect.left;
+                        const mouseY = e.clientY - rect.top;
+                        updateNetwork(mouseX, mouseY);
+                    }
+                });
+
+                // 点击创建脉冲波
+                heroSection.addEventListener('click', (e) => {
+                    if (isNetworkActive) {
+                        const rect = heroSection.getBoundingClientRect();
+                        const clickX = e.clientX - rect.left;
+                        const clickY = e.clientY - rect.top;
+                        
+                        // 从点击位置向所有活跃节点发送数据包
+                        nodes.forEach(node => {
+                            if (node.active) {
+                                setTimeout(() => {
+                                    createDataPacket({ x: clickX, y: clickY }, node);
+                                }, Math.random() * 500);
+                            }
+                        });
+                    }
+                });
+
+                // 窗口大小变化时重新创建网络
+                window.addEventListener('resize', () => {
+                    if (isNetworkActive) {
+                        clearNetwork();
+                        networkContainer.innerHTML = '';
+                        nodes = [];
+                        createNodes();
+                    }
+                });
+            }
+
+            // 滚动检测
+            function updateActiveSection() {
+                const scrollY = window.scrollY;
+                const windowHeight = window.innerHeight;
+                
+                sections.forEach((section, index) => {
+                    const sectionTop = section.offsetTop;
+                    const sectionBottom = sectionTop + section.offsetHeight;
+                    
+                    if (scrollY + windowHeight/2 >= sectionTop && scrollY + windowHeight/2 < sectionBottom) {
+                        if (currentSection !== index) {
+                            currentSection = index;
+                            
+                            // 更新进度点状态
+                            progressDots.forEach(dot => dot.classList.remove('active'));
+                            if (progressDots[index]) {
+                                progressDots[index].classList.add('active');
+                            }
+                            
+                            // 更新section状态
+                            sections.forEach(sec => sec.classList.remove('active'));
+                            section.classList.add('active');
+                            
+                            // 处理字母动画和导航显示
+                            handleLetterAnimation(index);
+                            
+                            // 更新导航字母状态
+                            if (index >= 1 && index <= 5) { // P到M的sections
+                                const letterIndex = index - 1;
+                                navLetters.forEach(letter => letter.classList.remove('active'));
+                                if (navLetters[letterIndex]) {
+                                    navLetters[letterIndex].classList.add('active');
+                                }
+                            } else if (index > 5) {
+                                // 关于我们区域，清除所有导航字母的active状态
+                                navLetters.forEach(letter => letter.classList.remove('active'));
+                            }
+                        }
+                    }
+                });
+            }
+
+            function handleLetterAnimation(sectionIndex) {
+                // 滚动提示和回到顶部按钮的状态管理
+                const scrollHint = document.getElementById('scrollHint');
+                const backToTopBtn = document.getElementById('backToTopBtn');
+                
+                if (sectionIndex >= 1 && sectionIndex <= 5) {
+                    // P-R-I-S-M区域：隐藏滚动提示，显示回到顶部按钮和导航
+                    if (scrollHint) {
+                        scrollHint.style.opacity = '0';
+                    }
+                    if (backToTopBtn) {
+                        backToTopBtn.classList.add('visible');
+                    }
+                    
+                    // 显示导航
+                    if (!lettersAnimated) {
+                        lettersAnimated = true;
+                    }
+                    if (prismNav) {
+                        prismNav.classList.remove('hiding');
+                        prismNav.classList.add('visible');
+                    }
+                    if (contentArea) contentArea.classList.add('with-nav');
+                } else if (sectionIndex > 5) {
+                    // 关于我们区域：隐藏导航，保持回到顶部按钮
+                    if (scrollHint) {
+                        scrollHint.style.opacity = '0';
+                    }
+                    if (backToTopBtn) {
+                        backToTopBtn.classList.add('visible');
+                    }
+                    
+                    // 隐藏导航 - 使用生动的消失动画
+                    if (prismNav) {
+                        prismNav.classList.remove('visible');
+                        prismNav.classList.add('hiding');
+                        
+                        // 延迟后完全隐藏
+                        setTimeout(() => {
+                            if (prismNav.classList.contains('hiding')) {
+                                prismNav.classList.remove('hiding');
+                            }
+                        }, 1200);
+                    }
+                    if (contentArea) contentArea.classList.remove('with-nav');
+                } else {
+                    // 首页区域：显示滚动提示，隐藏回到顶部按钮和导航
+                    if (scrollHint) {
+                        scrollHint.style.opacity = '1';
+                    }
+                    if (backToTopBtn) {
+                        backToTopBtn.classList.remove('visible');
+                    }
+                    
+                    // 隐藏导航
+                    if (prismNav) {
+                        prismNav.classList.remove('visible');
+                        prismNav.classList.remove('hiding');
+                    }
+                    if (contentArea) contentArea.classList.remove('with-nav');
+                }
+            }
+
+            // 回到顶部点击事件
+            const backToTopBtn = document.getElementById('backToTopBtn');
+            if (backToTopBtn) {
+                backToTopBtn.addEventListener('click', () => {
+                    window.scrollTo({
+                        top: 0,
+                        behavior: 'smooth'
+                    });
+                });
+            }
+
+            // 导航点击事件
+            navLetters.forEach((letter, index) => {
+                letter.addEventListener('click', () => {
+                    const targetSection = sections[index + 1]; // +1 because hero is section 0
+                    if (targetSection) {
+                        targetSection.scrollIntoView({
+                            behavior: 'smooth',
+                            block: 'center'
+                        });
+                    }
+                });
+            });
+
+            // 进度点击事件
+            progressDots.forEach((dot, index) => {
+                dot.addEventListener('click', () => {
+                    const targetSection = sections[index];
+                    if (targetSection) {
+                        targetSection.scrollIntoView({
+                            behavior: 'smooth',
+                            block: 'center'
+                        });
+                    }
+                });
+            });
+
+            // 鼠标悬停效果
+            document.querySelectorAll('.nav-letter, .detail-card, .letter, .timeline-item').forEach(element => {
+                element.addEventListener('mouseenter', () => {
+                    if (cursor) {
+                        cursor.style.transform = 'scale(2.5)';
+                        cursor.style.background = 'radial-gradient(circle, #a855f7, transparent)';
+                    }
+                });
+                
+                element.addEventListener('mouseleave', () => {
+                    if (cursor) {
+                        cursor.style.transform = 'scale(1)';
+                        cursor.style.background = 'radial-gradient(circle, #8b5cf6, transparent)';
+                    }
+                });
+            });
+            
+            // MyFXBook 小部件交互效果
+            const widgetCard = document.querySelector('.widget-card');
+            const infoCards = document.querySelectorAll('.info-card');
+            
+            if (widgetCard) {
+                widgetCard.addEventListener('mouseenter', () => {
+                    if (cursor) {
+                        cursor.style.transform = 'scale(2.5)';
+                        cursor.style.background = 'radial-gradient(circle, #22c55e, transparent)';
+                    }
+                });
+                
+                widgetCard.addEventListener('mouseleave', () => {
+                    if (cursor) {
+                        cursor.style.transform = 'scale(1)';
+                        cursor.style.background = 'radial-gradient(circle, #8b5cf6, transparent)';
+                    }
+                });
+            }
+            
+            infoCards.forEach(card => {
+                card.addEventListener('mouseenter', () => {
+                    if (cursor) {
+                        cursor.style.transform = 'scale(2.5)';
+                        cursor.style.background = 'radial-gradient(circle, #3b82f6, transparent)';
+                    }
+                });
+                
+                card.addEventListener('mouseleave', () => {
+                    if (cursor) {
+                        cursor.style.transform = 'scale(1)';
+                        cursor.style.background = 'radial-gradient(circle, #8b5cf6, transparent)';
+                    }
+                });
+            });
+            
+            // 数据面板光标交互效果
+            const dataPanel = document.querySelector('.data-panel');
+            const metricRows = document.querySelectorAll('.metric-row');
+            const detailMetrics = document.querySelectorAll('.detail-metric');
+            
+            if (dataPanel) {
+                dataPanel.addEventListener('mouseenter', () => {
+                    if (cursor) {
+                        cursor.style.transform = 'scale(2.5)';
+                        cursor.style.background = 'radial-gradient(circle, #3b82f6, transparent)';
+                    }
+                });
+                
+                dataPanel.addEventListener('mouseleave', () => {
+                    if (cursor) {
+                        cursor.style.transform = 'scale(1)';
+                        cursor.style.background = 'radial-gradient(circle, #8b5cf6, transparent)';
+                    }
+                });
+            }
+            
+            metricRows.forEach(row => {
+                row.addEventListener('mouseenter', () => {
+                    if (cursor) {
+                        cursor.style.transform = 'scale(2.5)';
+                        cursor.style.background = 'radial-gradient(circle, #22c55e, transparent)';
+                    }
+                });
+                
+                row.addEventListener('mouseleave', () => {
+                    if (cursor) {
+                        cursor.style.transform = 'scale(1)';
+                        cursor.style.background = 'radial-gradient(circle, #8b5cf6, transparent)';
+                    }
+                });
+            });
+            
+            detailMetrics.forEach(metric => {
+                metric.addEventListener('mouseenter', () => {
+                    if (cursor) {
+                        cursor.style.transform = 'scale(2.5)';
+                        cursor.style.background = 'radial-gradient(circle, #8b5cf6, transparent)';
+                    }
+                });
+                
+                metric.addEventListener('mouseleave', () => {
+                    if (cursor) {
+                        cursor.style.transform = 'scale(1)';
+                        cursor.style.background = 'radial-gradient(circle, #8b5cf6, transparent)';
+                    }
+                });
+            });
+
+            // 滚动事件监听
+            let ticking = false;
+            function onScroll() {
+                if (!ticking) {
+                    requestAnimationFrame(() => {
+                        updateActiveSection();
+                        ticking = false;
+                    });
+                    ticking = true;
+                }
+            }
+            
+            window.addEventListener('scroll', onScroll, { passive: true });
+
+            // 初始化
+            updateActiveSection();
+            
+            // 初始激活第一个section
+            if (sections.length > 0) {
+                sections[0].classList.add('active');
+            }
+            if (progressDots.length > 0) {
+                progressDots[0].classList.add('active');
+            }
+
+            // ===== MyFXBook 安全Session管理系统 =====
+            
+            // 获取MyFXBook凭据
+            function getCredentials() {
+                // 使用base64编码的凭据（简单加密）
+                const encodedCredentials = {
+                    email: 'cmV4bGVla2FuZzE2QGdtYWlsLmNvbQ==', 
+                    password: 'S29uZ2xvbmcjNiM5'
+                };
+                
+                return {
+                    email: atob(encodedCredentials.email),
+                    password: atob(encodedCredentials.password)
+                };
+            }
+            
+            // WL XAU（黄金猎手）备用数据（基于真实API数据）
+            const WLXAU_FALLBACK_DATA = {
+                accountId: "8800379",
+                name: "WL XAU",
+                balance: "8007.81",
+                profit: "4007.81",
+                gain: "81.92",
+                drawdown: "47.46",
+                daily: "0.74",
+                monthly: "25.35",
+                equity: "8007.81",
+                equityPercent: "100.00",
+                pips: "7945",
+                profitFactor: "1.93"
+            };
+            
+            // 天网系统备用数据（基于真实API数据）
+                    const TIANWANG_FALLBACK_DATA = {
+            accountId: "8800401",
+            name: "天网系统",
+            balance: "13315.19",
+            profit: "3315.19",
+            gain: "33.15",
+            drawdown: "23.64",
+            daily: "0.43",
+            monthly: "13.97",
+            equity: "13093.42",
+            equityPercent: "98.33",
+            pips: "351201",
+            profitFactor: "1.7"
+        };
+
+            // Session管理器
+            class LocalDataManager {
+                constructor() {
+                    this.lastUpdate = 0;
+                    this.updateInterval = 2 * 60 * 60 * 1000; // 2小时更新一次
+                    this.isUpdating = false;
+                    this.lastSuccessfulData = null;
+                    this.currentAccount = 'golden-hunter'; // 当前选中的账户
+                }
+                
+                // 显示状态提示
+                showStatus(message, type = 'warning') {
+                    const statusElement = document.getElementById('dataStatus');
+                    if (statusElement) {
+                        const statusMessage = statusElement.querySelector('.status-message');
+                        const statusIcon = statusElement.querySelector('.status-icon');
+                        const statusText = statusElement.querySelector('.status-text');
+                        
+                        // 设置样式和内容
+                        statusMessage.className = `status-message ${type}`;
+                        statusText.textContent = message;
+                        
+                        // 设置图标
+                        if (type === 'success') {
+                            statusIcon.textContent = '✅';
+                        } else if (type === 'error') {
+                            statusIcon.textContent = '❌';
+                        } else {
+                            statusIcon.textContent = '⚠️';
+                        }
+                        
+                        statusElement.style.display = 'block';
+                        
+                        // 如果是成功状态，3秒后自动隐藏
+                        if (type === 'success') {
+                            setTimeout(() => {
+                                statusElement.style.display = 'none';
+                            }, 3000);
+                        }
+                    }
+                }
+                
+                // 隐藏状态提示
+                hideStatus() {
+                    const statusElement = document.getElementById('dataStatus');
+                    if (statusElement) {
+                        statusElement.style.display = 'none';
+                    }
+                }
+                
+
+                
+                // 获取并更新页面数据（黄金猎手）
+                async fetchAndUpdateData() {
+                    try {
+                        console.log('🚀 开始获取黄金猎手数据...');
+                        this.hideStatus(); // 隐藏之前的提示
+                        
+                        // 尝试从GitHub Pages的数据文件获取最新数据
+                        try {
+                            const response = await fetch('./data/wl-xau-data.json');
+                            if (response.ok) {
+                                const data = await response.json();
+                                if (data && data.account) {
+                                    console.log('✅ 成功从GitHub获取最新数据');
+                                    this.updatePageWithData(data.account);
+                                    this.lastSuccessfulData = data.account;
+                                    this.lastUpdate = Date.now();
+                                    this.showStatus('数据已更新', 'success');
+                                    return;
+                                }
+                            }
+                        } catch (fetchError) {
+                            console.log('⚠️ 无法从GitHub获取数据，使用备用方案');
+                        }
+                        
+                        // 备用方案：使用上次成功的数据或硬编码数据
+                        if (this.lastSuccessfulData) {
+                            console.log('🌐 使用上次成功的数据');
+                            this.updatePageWithData(this.lastSuccessfulData);
+                            this.showStatus('使用上次成功的数据', 'success');
+                        } else {
+                            console.log('🌐 使用备用数据');
+                            this.updatePageWithData(WLXAU_FALLBACK_DATA);
+                            this.lastSuccessfulData = WLXAU_FALLBACK_DATA;
+                            this.lastUpdate = Date.now();
+                            this.showStatus('使用备用数据', 'success');
+                        }
+                        
+                    } catch (error) {
+                        console.error('❌ 获取黄金猎手数据失败:', error.message);
+                        
+                        // 如果有之前的数据，继续使用
+                        if (this.lastSuccessfulData) {
+                            console.log('⚠️ 使用上次成功的数据');
+                            this.updatePageWithData(this.lastSuccessfulData);
+                            this.showStatus('数据获取失败，显示上次成功的数据', 'error');
+                        } else {
+                            // 使用硬编码的备用数据
+                            console.log('🔄 使用硬编码备用数据');
+                            this.updatePageWithData(WLXAU_FALLBACK_DATA);
+                            this.lastSuccessfulData = WLXAU_FALLBACK_DATA;
+                            this.lastUpdate = Date.now();
+                            this.showStatus('数据获取失败，使用备用数据', 'error');
+                        }
+                    }
+                }
+                
+                // 获取天网系统数据
+                async fetchTianWangData() {
+                    try {
+                        console.log('🚀 开始获取天网系统数据...');
+                        this.hideStatus(); // 隐藏之前的提示
+                        
+                        // 尝试从GitHub Pages的数据文件获取最新数据
+                        try {
+                            const response = await fetch('./data/tianwang-data.json');
+                            if (response.ok) {
+                                const data = await response.json();
+                                if (data && data.account) {
+                                    console.log('✅ 成功从GitHub获取最新数据');
+                                    this.updatePageWithData(data.account);
+                                    this.lastSuccessfulData = data.account;
+                                    this.lastUpdate = Date.now();
+                                    this.showStatus('数据已更新', 'success');
+                                    return;
+                                }
+                            }
+                        } catch (fetchError) {
+                            console.log('⚠️ 无法从GitHub获取数据，使用备用方案');
+                        }
+                        
+                        // 备用方案：使用上次成功的数据或硬编码数据
+                        if (this.lastSuccessfulData) {
+                            console.log('🌐 使用上次成功的数据');
+                            this.updatePageWithData(this.lastSuccessfulData);
+                            this.showStatus('使用上次成功的数据', 'success');
+                        } else {
+                            console.log('🌐 使用备用数据');
+                            this.updatePageWithData(TIANWANG_FALLBACK_DATA);
+                            this.lastSuccessfulData = TIANWANG_FALLBACK_DATA;
+                            this.lastUpdate = Date.now();
+                            this.showStatus('使用备用数据', 'success');
+                        }
+                        
+                    } catch (error) {
+                        console.error('❌ 获取天网系统数据失败:', error.message);
+                        
+                        // 如果有之前的数据，继续使用
+                        if (this.lastSuccessfulData) {
+                            console.log('⚠️ 使用上次成功的数据');
+                            this.updatePageWithData(this.lastSuccessfulData);
+                            this.showStatus('数据获取失败，显示上次成功的数据', 'error');
+                        } else {
+                            // 使用硬编码的备用数据
+                            console.log('🔄 使用硬编码备用数据');
+                            this.updatePageWithData(TIANWANG_FALLBACK_DATA);
+                            this.lastSuccessfulData = TIANWANG_FALLBACK_DATA;
+                            this.lastUpdate = Date.now();
+                            this.showStatus('数据获取失败，使用备用数据', 'error');
+                        }
+                    }
+                }
+                
+                // 更新页面显示数据
+                updatePageWithData(accountData) {
+                    try {
+                        // 更新关键指标
+                        const balanceValue = document.querySelector('.balance-value');
+                        const profitValue = document.querySelector('.profit-value');
+                        const gainValue = document.querySelector('.gain-value');
+                        const drawdownValue = document.querySelector('.drawdown-value');
+                        const dailyValue = document.querySelector('.daily-value');
+                        const monthlyValue = document.querySelector('.monthly-value');
+                        
+                        if (balanceValue) {
+                            balanceValue.textContent = `$${parseFloat(accountData.balance).toLocaleString('en-US', {minimumFractionDigits: 2})}`;
+                        }
+                        if (profitValue) {
+                            profitValue.textContent = `$${parseFloat(accountData.profit).toLocaleString('en-US', {minimumFractionDigits: 2})}`;
+                        }
+                        if (gainValue) {
+                            gainValue.textContent = `+${parseFloat(accountData.gain).toFixed(2)}%`;
+                        }
+                        if (drawdownValue) {
+                            drawdownValue.textContent = `-${parseFloat(accountData.drawdown).toFixed(2)}%`;
+                        }
+                        if (dailyValue) {
+                            dailyValue.textContent = `${parseFloat(accountData.daily) > 0 ? '+' : ''}${parseFloat(accountData.daily).toFixed(2)}%`;
+                        }
+                        if (monthlyValue) {
+                            monthlyValue.textContent = `${parseFloat(accountData.monthly) > 0 ? '+' : ''}${parseFloat(accountData.monthly).toFixed(2)}%`;
+                        }
+                        
+                        // 更新页面标题显示当前账户
+                        this.updatePageTitle(accountData.name || '未知账户');
+                        
+                        // 添加数据更新动画
+                        this.addDataUpdateAnimation();
+                        
+                        console.log(`✅ ${accountData.name || '账户'}数据已更新`);
+                    } catch (error) {
+                        console.error('❌ 更新页面数据时发生错误:', error);
+                    }
+                }
+                
+                // 更新页面标题
+                updatePageTitle(accountName) {
+                    const titleElement = document.querySelector('.metrics-container h3');
+                    if (titleElement) {
+                        titleElement.textContent = `关键指标 - ${accountName}`;
+                    }
+                }
+                
+
+                
+
+                
+
+
+                // 添加数据更新动画
+                addDataUpdateAnimation() {
+                    const elements = document.querySelectorAll('.balance-value, .profit-value, .gain-value, .drawdown-value, .daily-value, .monthly-value');
+                    elements.forEach(element => {
+                        element.classList.add('data-updated');
+                        setTimeout(() => {
+                            element.classList.remove('data-updated');
+                        }, 2000);
+                    });
+                }
+                
+                // 启动自动更新
+                startAutoUpdate() {
+                    // 立即获取一次数据
+                    this.fetchAndUpdateData();
+                    
+                    // 每2小时自动更新一次
+                    setInterval(() => {
+                        this.fetchAndUpdateData();
+                    }, this.updateInterval);
+                    
+                    console.log('🚀 本地数据自动更新系统已启动');
+                }
+            }
+
+            // 创建并启动本地数据管理器
+            const dataManager = new LocalDataManager();
+            dataManager.startAutoUpdate();
+            
+            // 页面加载完成后立即加载黄金猎手数据
+            setTimeout(() => {
+                console.log('🚀 页面加载完成，开始加载初始数据...');
+                dataManager.fetchAndUpdateData();
+            }, 100);
+
+            // 账户切换功能
+            const accountTabs = document.querySelectorAll('.account-tab');
+            accountTabs.forEach(tab => {
+                tab.addEventListener('click', function() {
+                    // 移除所有活动状态
+                    accountTabs.forEach(t => {
+                        t.style.background = 'rgba(139, 92, 246, 0.1)';
+                        t.style.border = '2px solid rgba(139, 92, 246, 0.3)';
+                        t.querySelector('span').style.color = '#a1a1aa';
+                        t.querySelector('span').style.fontWeight = '500';
+                    });
+                    
+                    // 设置当前选中状态
+                    this.style.background = 'linear-gradient(135deg, rgba(139, 92, 246, 0.3), rgba(168, 85, 247, 0.2))';
+                    this.style.border = '2px solid #8b5cf6';
+                    this.querySelector('span').style.color = '#ffffff';
+                    this.querySelector('span').style.fontWeight = '600';
+                    
+                    // 这里可以添加切换不同账户数据的逻辑
+                    const accountName = this.querySelector('span').textContent;
+                    console.log('切换到账户:', accountName);
+                    
+                    // 根据账户名称执行不同操作
+                    if (accountName === '黄金猎手') {
+                        dataManager.fetchAndUpdateData();
+                        console.log('✅ 已切换到黄金猎手账户');
+                        // 更新标题
+                        dataManager.updatePageTitle('黄金猎手');
+                    } else if (accountName === '天网系统') {
+                        console.log('🚀 切换到天网系统账户');
+                        // 获取天网系统数据
+                        dataManager.fetchTianWangData();
+                        // 更新标题
+                        dataManager.updatePageTitle('天网系统');
+                    }
+                });
+            });
+
+
+
+            // 添加数据更新动画的CSS
+            const style = document.createElement('style');
+            style.textContent = `
+                .data-updated {
+                    animation: dataUpdatePulse 0.8s ease-in-out;
+                }
+                
+                @keyframes dataUpdatePulse {
+                    0% { transform: scale(1); }
+                    50% { transform: scale(1.05); background: rgba(139, 92, 246, 0.3); }
+                    100% { transform: scale(1); }
+                }
+                
+                .metric-value, .stat-value {
+                    transition: all 0.3s ease;
+                }
+                
+                @keyframes titleGlow {
+                    0%, 100% { filter: drop-shadow(0 0 20px rgba(139, 92, 246, 0.4)); }
+                    50% { filter: drop-shadow(0 0 30px rgba(139, 92, 246, 0.8)); }
+                }
+                
+                @keyframes float {
+                    0%, 100% { transform: translateY(0px); }
+                    50% { transform: translateY(-20px); }
+                }
+                
+                .account-data-card, .strategy-panel, .feature-card, .info-item, .metric-card, .stat-item {
+                    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+                }
+                
+                .account-tab {
+                    transition: all 0.3s ease;
+                }
+                
+                .account-tab:hover {
+                    transform: translateY(-2px);
+                    box-shadow: 0 10px 25px rgba(139, 92, 246, 0.3);
+                }
+                
+                /* 数据状态提示样式 */
+                .status-message {
+                    background: linear-gradient(135deg, rgba(255, 193, 7, 0.2), rgba(255, 152, 0, 0.1));
+                    border: 1px solid rgba(255, 193, 7, 0.4);
+                    color: #ffc107;
+                    animation: statusPulse 2s ease-in-out infinite;
+                }
+                
+                .status-message.success {
+                    background: linear-gradient(135deg, rgba(76, 175, 80, 0.2), rgba(139, 195, 74, 0.1));
+                    border: 1px solid rgba(76, 175, 80, 0.4);
+                    color: #4caf50;
+                }
+                
+                .status-message.error {
+                    background: linear-gradient(135deg, rgba(244, 67, 54, 0.2), rgba(239, 83, 80, 0.1));
+                    border: 1px solid rgba(244, 67, 54, 0.4);
+                    color: #f44336;
+                }
+                
+                @keyframes statusPulse {
+                    0%, 100% { opacity: 1; }
+                    50% { opacity: 0.8; }
+                }
+                
+                .status-icon {
+                    margin-right: 10px;
+                    font-size: 1.2rem;
+                }
+                
+                .widget-container a {
+                    transition: all 0.3s ease;
+                }
+                
+                .title-icon {
+                    transition: all 0.3s ease;
+                }
+            `;
+            document.head.appendChild(style);
+
+
+
+            // ===== 黄金猎手系统交互增强 =====
+            
+            // 添加标题图标动画
+            const titleIcon = document.querySelector('.title-icon');
+            if (titleIcon) {
+                titleIcon.addEventListener('mouseenter', () => {
+                    titleIcon.style.transform = 'scale(1.1) rotate(5deg)';
+                    titleIcon.style.filter = 'drop-shadow(0 0 20px rgba(139, 92, 246, 0.6))';
+                });
+                
+                titleIcon.addEventListener('mouseleave', () => {
+                    titleIcon.style.transform = 'scale(1) rotate(0deg)';
+                    titleIcon.style.filter = 'drop-shadow(0 0 20px rgba(139, 92, 246, 0.4))';
+                });
+            }
+
+            // 添加指标卡片悬停效果
+            const metricCards = document.querySelectorAll('.metric-card');
+            metricCards.forEach((card, index) => {
+                // 添加进入动画
+                card.style.opacity = '0';
+                card.style.transform = 'translateY(30px)';
+                
+                setTimeout(() => {
+                    card.style.transition = 'all 0.6s ease';
+                    card.style.opacity = '1';
+                    card.style.transform = 'translateY(0)';
+                }, index * 200);
+                
+                card.addEventListener('mouseenter', () => {
+                    card.style.transform = 'translateY(-8px) scale(1.02)';
+                    card.style.boxShadow = '0 25px 50px rgba(139, 92, 246, 0.25)';
+                    const bg = card.querySelector('.metric-bg');
+                    if (bg) bg.style.opacity = '1';
+                });
+                
+                card.addEventListener('mouseleave', () => {
+                    card.style.transform = 'translateY(0) scale(1)';
+                    card.style.boxShadow = 'none';
+                    const bg = card.querySelector('.metric-bg');
+                    if (bg) bg.style.opacity = '0';
+                });
+            });
+
+            // 添加状态项目悬停效果
+            const statusItems = document.querySelectorAll('.status-item');
+            statusItems.forEach(item => {
+                item.addEventListener('mouseenter', () => {
+                    item.style.transform = 'translateY(-2px)';
+                    item.style.background = 'rgba(139, 92, 246, 0.15)';
+                });
+                
+                item.addEventListener('mouseleave', () => {
+                    item.style.transform = 'translateY(0)';
+                    item.style.background = 'rgba(139, 92, 246, 0.1)';
+                });
+            });
+
+            // 添加次要指标悬停效果
+            const secondaryMetrics = document.querySelectorAll('.secondary-metric');
+            secondaryMetrics.forEach((metric, index) => {
+                // 添加进入动画
+                metric.style.opacity = '0';
+                metric.style.transform = 'translateY(20px)';
+                
+                setTimeout(() => {
+                    metric.style.transition = 'all 0.5s ease';
+                    metric.style.opacity = '1';
+                    metric.style.transform = 'translateY(0)';
+                }, 600 + index * 150);
+                
+                metric.addEventListener('mouseenter', () => {
+                    metric.style.transform = 'translateY(-5px)';
+                    metric.style.background = 'rgba(139, 92, 246, 0.12)';
+                    metric.style.boxShadow = '0 15px 30px rgba(139, 92, 246, 0.15)';
+                });
+                
+                metric.addEventListener('mouseleave', () => {
+                    metric.style.transform = 'translateY(0)';
+                    metric.style.background = 'rgba(139, 92, 246, 0.08)';
+                    metric.style.boxShadow = 'none';
+                });
+            });
+
+
+
+            // ===== 黄金猎手系统交互增强结束 =====
+
+            // ===== MyFXBook Session管理系统结束 =====
+        });
+    </script>
+</body>
+</html>
